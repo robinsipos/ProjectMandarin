@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Hanzi Quiz</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --text-color: #1a202c;
+            --header-color: #1a202c;
+            --pinyin-color: #4a5568;
+            --container-bg: rgba(255, 255, 255, 0.6);
+            --button-bg: rgba(255, 255, 255, 0.8);
+            --button-border: #e2e8f0;
+            --button-hover-bg: #ffffff;
+            --primary-action-text: #ffffff;
+            --selection-group-bg: rgba(0,0,0,0.05);
+
+            /* Aura Gradients & Effects */
+            --primary-gradient: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
+            --correct-gradient: linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%);
+            --incorrect-gradient: linear-gradient(120deg, #ff9a9e 0%, #fecfef 100%);
+            --correct-text: #2d3748;
+            --incorrect-text: #2d3748;
+            --hanzi-glow-color: rgba(102, 166, 255, 0.5);
+            --icon-color: #3d4f60;
+
+            --switch-bg: #cbd5e0;
+            --switch-knob: white;
+            --switch-active-bg: #66a6ff;
+            --danger-button-bg: #e53e3e;
+            --danger-button-hover-bg: #c53030;
+            --danger-button-text: #ffffff;
+
+            /* Slider icon colors for light mode */
+            --slider-icon-color-off: #666;
+            --slider-icon-color-on: #fff;
+
+            /* New: Active selection */
+            --selection-active-border: #66a6ff;
+            --selection-active-shadow: rgba(102, 166, 255, 0.3);
+        }
+
+        body.dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #ffffff;
+            --pinyin-color: #a0aec0;
+            --container-bg: rgba(29, 37, 50, 0.6);
+            --button-bg: rgba(45, 55, 72, 0.8);
+            --button-border: #4a5568;
+            --button-hover-bg: #4a5568;
+            --hanzi-glow-color: rgba(137, 247, 254, 0.7);
+            --icon-color: #a0aec0;
+            --selection-group-bg: rgba(255,255,255,0.05);
+
+            --switch-bg: #4a5568;
+            --switch-knob: #e2e8f0;
+            --switch-active-bg: #66a6ff;
+            --danger-button-bg: #c53030;
+            --danger-button-hover-bg: #9b2c2c;
+
+            /* Slider icon colors for dark mode */
+            --slider-icon-color-off: #ccc;
+            --slider-icon-color-on: #fff;
+
+            /* New: Active selection */
+            --selection-active-border: #89f7fe;
+            --selection-active-shadow: rgba(137, 247, 254, 0.3);
+        }
+
+        html { height: 100%; }
+
+        body {
+            font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100%;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: ''; position: fixed; top: 50%; left: 50%;
+            width: 800px; height: 800px;
+            background: radial-gradient(circle, rgba(102, 166, 255, 0.3) 0%, rgba(137, 247, 254, 0.3) 50%, transparent 70%);
+            transform: translate(-50%, -50%);
+            filter: blur(120px); z-index: -1;
+            animation: pulse 20s infinite alternate ease-in-out;
+        }
+
+        body.dark-mode::before {
+            background: radial-gradient(circle, rgba(102, 166, 255, 0.2) 0%, rgba(137, 247, 254, 0.2) 50%, transparent 70%);
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-55%, -45%) scale(0.8); opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { transform: translate(-45%, -55%) scale(1.3); opacity: 0.7; }
+        }
+
+        .main-container { width: 90%; max-width: 800px; position: relative; }
+        .screen-wrapper { position: relative; width: 100%; min-height: 500px; /* Ensure space for transition */ }
+
+        .screen {
+            background-color: var(--container-bg); padding: 3rem; border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            position: absolute; width: 100%; box-sizing: border-box;
+            top: 0; left: 0; opacity: 0; visibility: hidden;
+            transform: translateX(30px) scale(0.98);
+            transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s;
+            text-align: center;
+        }
+        .screen.active {
+            opacity: 1; visibility: visible; transform: translateX(0) scale(1);
+            position: relative; /* Take up space when active */
+        }
+        
+        /* Initial animation for first load */
+        .screen:not(.active) {
+            animation: none; /* Disable initial animation for non-active screens */
+        }
+        #main-menu-screen.active {
+            animation: fadeInScale 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+
+        h1, h2 {
+            color: var(--header-color); margin-top: 0; margin-bottom: 2rem; font-weight: 700;
+        }
+        h1 { font-size: 2.5rem; letter-spacing: -1px; }
+        h2 { font-size: 1.8rem; }
+
+        .action-btn {
+            padding: 1rem; font-size: 1.1rem; font-weight: 500; border-radius: 16px;
+            cursor: pointer; transition: all 0.2s ease;
+            border: 1px solid var(--button-border); background-color: var(--button-bg);
+            color: var(--text-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem;
+            outline: none; /* Remove default focus outline */
+        }
+        .action-btn:hover {
+            transform: translateY(-4px) scale(1.02); box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .action-btn:active {
+            transform: translateY(-1px) scale(1); box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .action-btn:focus-visible { /* For keyboard navigation */
+            box-shadow: 0 0 0 3px var(--primary-gradient);
+            transform: translateY(-2px);
+        }
+        .action-btn svg { width: 20px; height: 20px; }
+
+        .primary-button {
+            background: var(--primary-gradient); color: var(--primary-action-text);
+            border: none; font-weight: 700;
+            box-shadow: 0 8px 25px rgba(102, 166, 255, 0.3);
+        }
+        .primary-button svg { fill: var(--primary-action-text); }
+
+        .danger-button {
+            background-color: var(--danger-button-bg);
+            color: var(--danger-button-text);
+            border: none;
+            box-shadow: 0 8px 25px rgba(229, 62, 62, 0.3);
+        }
+        .danger-button:hover {
+            background-color: var(--danger-button-hover-bg);
+        }
+        .danger-button svg { fill: var(--danger-button-text); }
+
+        /* General Menu Layouts */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .menu-grid .action-btn {
+            width: 100%;
+        }
+
+        /* Quiz Setup Screen */
+        #quiz-settings-screen .setup-container {
+            display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; text-align: left;
+        }
+        #quiz-settings-screen .setup-column-right {
+            display: flex; flex-direction: column; gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            #quiz-settings-screen .setup-container { grid-template-columns: 1fr; }
+        }
+
+        .selection-group { background: var(--selection-group-bg); padding: 1.5rem; border-radius: 16px; }
+        .selection-group h3 { margin-top: 0; margin-bottom: 1rem; font-weight: 700; }
+        .selection-option {
+            display: flex; justify-content: space-between; align-items: center;
+            background-color: var(--button-bg); padding: 1rem; border-radius: 12px;
+            margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s ease;
+            border: 1px solid var(--button-border);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+        }
+        .selection-option:last-child { margin-bottom: 0; }
+        .selection-option:hover { border-color: var(--primary-gradient); transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
+        .selection-option:focus-within {
+            border-color: var(--selection-active-border);
+            box-shadow: 0 0 0 3px var(--selection-active-shadow);
+            transform: translateY(-1px);
+        }
+        .selection-option input { 
+            display: none; 
+        }
+        .selection-option span { display: flex; align-items: center; }
+        .selection-option span::before {
+            content: ''; display: inline-block; width: 20px; height: 20px;
+            border: 2px solid var(--button-border); border-radius: 6px;
+            margin-right: 12px; vertical-align: middle; transition: all 0.2s;
+            box-sizing: border-box; /* Include padding/border in element's total width/height */
+        }
+        .selection-option input[type="radio"] + span::before { border-radius: 50%; }
+        .selection-option input:checked + span::before { 
+            background-color: #66a6ff; border-color: #66a6ff; 
+            box-shadow: 0 0 0 3px rgba(102, 166, 255, 0.4); /* Glow on check */
+            transform: scale(1.1); /* Slight pop on check */
+        }
+        body.dark-mode .selection-option input:checked + span::before {
+            box-shadow: 0 0 0 3px rgba(137, 247, 254, 0.4);
+        }
+
+
+        #start-quiz-btn { margin-top: 1.5rem; width: 100%; grid-column: 1 / -1; }
+        .quiz-setup-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .quiz-setup-actions .action-btn { flex: 1; }
+
+        /* Quiz Container */
+        #hanzi-display {
+            font-size: 9rem; font-weight: 500; color: var(--header-color);
+            line-height: 1.1; margin-bottom: 1rem;
+            text-shadow: 0 0 15px var(--hanzi-glow-color), 0 0 30px var(--hanzi-glow-color);
+            transition: text-shadow 0.4s ease;
+        }
+        @media (max-width: 480px) {
+            #hanzi-display { font-size: 6rem; }
+        }
+
+        #pinyin-display { font-size: 2rem; color: var(--pinyin-color); min-height: 3rem; font-weight: 500;}
+        #feedback { 
+            margin-top: 1.5rem; font-size: 1.25rem; font-weight: 700; min-height: 28px; 
+            display: flex; justify-content: center; align-items: center; gap: 0.5rem; 
+            opacity: 0; transition: opacity 0.3s ease-out;
+        }
+        #feedback.show { opacity: 1; }
+        #feedback svg { width: 24px; height: 24px; }
+        
+        #options-container { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem; 
+        }
+        .option-btn { 
+            animation: fadeInScale 0.3s ease-out backwards; /* Add initial animation */
+            /* Delay each button slightly */
+            animation-delay: calc(var(--option-index) * 0.05s);
+        }
+        .option-btn.correct { background: var(--correct-gradient) !important; border-color: transparent !important; color: var(--correct-text) !important; font-weight: 700; }
+        .option-btn.incorrect { background: var(--incorrect-gradient) !important; border-color: transparent !important; color: var(--incorrect-text) !important; font-weight: 700; }
+        .option-btn.correct, .option-btn.incorrect {
+            animation: pulseHighlight 0.6s ease forwards;
+        }
+
+        @keyframes pulseHighlight {
+            0% { transform: scale(1); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+            50% { transform: scale(1.03); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+            100% { transform: scale(1); }
+        }
+
+
+        #score-container { margin-top: 2.5rem; color: var(--pinyin-color); font-size: 1.1rem; }
+        
+        #quiz-controls-footer { border-top: 1px solid var(--button-border); margin-top: 2.5rem; padding-top: 2rem; display:flex; justify-content: center; align-items: center; gap: 1rem;}
+        .footer-btn { 
+            background: none; border: none; color: var(--pinyin-color); 
+            cursor: pointer; font-size: 0.9rem; padding: 0.5rem;
+            transition: color 0.2s; display: flex; align-items: center; gap: 0.4rem;
+        }
+        .footer-btn svg { width: 18px; height: 18px; fill: var(--pinyin-color); transition: fill 0.2s; }
+        .footer-btn:hover, .footer-btn:hover svg { color: var(--text-color); fill: var(--text-color); }
+        
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; margin-left: 8px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--switch-bg); transition: .4s; border-radius: 24px; }
+        .slider:before { 
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; 
+            background-color: var(--switch-knob); transition: .4s; border-radius: 50%; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            /* Icon styles */
+            display: flex; justify-content: center; align-items: center;
+            font-size: 12px; /* Adjust font size for icon */
+        }
+        input:checked + .slider { background-color: var(--switch-active-bg); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Icons for sliders */
+        #dark-mode-toggle + .slider:before { content: '☀️'; color: var(--slider-icon-color-off); } /* Sun for light mode */
+        #dark-mode-toggle:checked + .slider:before { content: '🌙'; color: var(--slider-icon-color-on); } /* Moon for dark mode */
+
+        #pinyin-toggle + .slider:before { content: '🔠'; color: var(--slider-icon-color-off); } /* Alphabet for off */
+        #pinyin-toggle:checked + .slider:before { content: '汉'; color: var(--slider-icon-color-on); } /* Hanzi for on */
+
+
+        .modal-overlay {
+            position: fixed; z-index: 300; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); display: flex;
+            justify-content: center; align-items: center;
+            backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s ease;
+            visibility: hidden; /* Hide by default */
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        
+        .modal-content {
+            background-color: var(--container-bg); padding: 2.5rem; border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2); width: 90%;
+            text-align: center; border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: scale(0.95); opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); opacity: 1; }
+
+        #about-modal-content { max-width: 450px; }
+        #about-modal-content p { line-height: 1.6; }
+        #about-modal-content a { color: #66a6ff; font-weight: 500; }
+        
+        #hint-window .modal-content { max-width: 600px; }
+        #hint-window h3 { margin-top: 0; color: var(--header-color); font-weight: 700; }
+        #hint-window p { margin-bottom: 0.5rem; line-height: 1.6; }
+        #hint-window #fun-fact { font-style: italic; color: var(--pinyin-color); margin-top: 1rem; }
+        #close-hint-btn { margin-top: 1.5rem; width: 100%; }
+
+        #confirm-quit-modal .modal-content { max-width: 400px; }
+        #confirm-quit-modal .modal-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        #confirm-quit-modal .modal-actions .action-btn { flex: 1; }
+
+
+        #results-screen .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; margin: 2rem 0; text-align: center; }
+        #results-screen .stat-item { background-color: var(--selection-group-bg); padding: 1.5rem; border-radius: 16px; transition: background-color 0.3s; }
+        #results-screen .stat-item h3 { margin: 0 0 0.5rem 0; font-size: 1rem; color: var(--pinyin-color); font-weight: 500;}
+        #results-screen .stat-item p { margin: 0; font-size: 2.2rem; font-weight: 700; color: var(--header-color); }
+        #results-list-container { margin-top: 2rem; max-height: 300px; overflow-y: auto; padding: 10px; border-radius: 16px; background: var(--selection-group-bg); }
+        .result-item { display: flex; align-items: center; padding: 1rem; border-bottom: 1px solid var(--button-border); }
+        .result-item:last-child { border-bottom: none; }
+        .result-item-hanzi { font-size: 1.5rem; font-weight: 700; width: 80px; }
+        .result-item-details { flex-grow: 1; text-align: left; }
+        .result-item-details p { margin: 0; line-height: 1.4; }
+        .result-user-answer.incorrect-text { color: #e53e3e; font-weight: 500; }
+        body.dark-mode .result-user-answer.incorrect-text { color: #fc8181; }
+        .result-icon { width: 40px; text-align: right; }
+        .result-icon svg { width: 24px; height: 24px; }
+        #results-actions { margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        @media (max-width: 600px) {
+            #results-actions { grid-template-columns: 1fr; }
+        }
+        
+        .toggle-option {
+            align-items: center;
+        }
+        .toggle-option > span {
+            flex-grow: 1;
+        }
+
+    </style>
+</head>
+<body class="dark-mode">
+
+    <div class="main-container">
+        <div class="screen-wrapper">
+            <div id="main-menu-screen" class="screen active">
+                <h1>Modern Hanzi Quiz</h1>
+                <p style="margin-top: -1rem; margin-bottom: 2.5rem; opacity: 0.8;">Test your Chinese vocabulary knowledge.</p>
+                <div class="menu-grid">
+                    <button class="action-btn primary-button" id="start-new-quiz-btn">Start New Quiz</button>
+                    <button class="action-btn" id="settings-btn">Settings</button>
+                    <button class="action-btn" id="about-btn">About</button>
+                </div>
+            </div>
+            
+            <div id="quiz-settings-screen" class="screen">
+                <h2>Quiz Setup</h2>
+                <div class="setup-container">
+                    <div class="setup-column-left">
+                        <div class="selection-group">
+                            <h3>HSK Level</h3>
+                            <label class="selection-option"><input type="checkbox" name="hsk-level" value="1" checked><span>HSK 1</span></label>
+                            <label class="selection-option"><input type="checkbox" name="hsk-level" value="2"><span>HSK 2</span></label>
+                            <label class="selection-option"><input type="checkbox" name="hsk-level" value="3"><span>HSK 3</span></label>
+                            <label class="selection-option"><input type="checkbox" name="hsk-level" value="4"><span>HSK 4</span></label>
+                            <label class="selection-option"><input type="checkbox" name="hsk-level" value="5"><span>HSK 5</span></label>
+                        </div>
+                    </div>
+                    <div class="setup-column-right">
+                        <div class="selection-group">
+                            <h3>Questions</h3>
+                            <label class="selection-option"><input type="radio" name="quantity" value="20" checked><span>20</span></label>
+                            <label class="selection-option"><input type="radio" name="quantity" value="40"><span>40</span></label>
+                            <label class="selection-option"><input type="radio" name="quantity" value="all"><span>All</span></label>
+                        </div>
+                        <div class="selection-group">
+                            <h3>Options</h3>
+                            <label class="selection-option toggle-option">
+                                <span>Show Pinyin</span>
+                                <label class="switch"><input type="checkbox" id="pinyin-toggle" checked><span class="slider"></span></label>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="quiz-setup-actions">
+                    <button id="back-to-main-from-quiz-setup-btn" class="action-btn">Back to Main Menu</button>
+                    <button id="start-quiz-btn" class="action-btn primary-button">Start Quiz</button>
+                </div>
+            </div>
+
+            <div id="quiz-container" class="screen">
+                <div id="hanzi-display"></div>
+                <div id="pinyin-display"></div>
+                <div id="feedback"></div>
+                <div id="options-container">
+                    <button class="action-btn option-btn" style="--option-index:0;"></button>
+                    <button class="action-btn option-btn" style="--option-index:1;"></button>
+                    <button class="action-btn option-btn" style="--option-index:2;"></button>
+                    <button class="action-btn option-btn" style="--option-index:3;"></button>
+                </div>
+                <div id="score-container"></div>
+                <div id="quiz-controls-footer">
+                    <button class="footer-btn" id="end-quiz-btn">End Quiz</button>
+                </div>
+            </div>
+
+            <div id="settings-screen" class="screen">
+                <h2>Settings</h2>
+                <div class="selection-group" style="max-width: 400px; margin: 0 auto;">
+                    <label class="selection-option toggle-option">
+                        <span>Dark Mode</span>
+                        <label class="switch"><input type="checkbox" id="dark-mode-toggle" checked><span class="slider"></span></label>
+                    </label>
+                </div>
+                <div class="menu-grid" style="margin-top: 2rem;">
+                    <button class="action-btn" id="back-to-main-from-settings-btn">Back to Main Menu</button>
+                </div>
+            </div>
+
+            <div id="results-screen" class="screen">
+                <h2>Quiz Results</h2>
+                <div class="stats-grid">
+                    <div class="stat-item"><h3>Score</h3><p id="final-score">0 / 0</p></div>
+                    <div class="stat-item"><h3>Accuracy</h3><p id="final-accuracy">0%</p></div>
+                    <div class="stat-item"><h3>Time Taken</h3><p id="final-time">0m 0s</p></div>
+                </div>
+                <h3>Review Your Answers:</h3>
+                <div id="results-list-container"></div>
+                <div id="results-actions">
+                    <button id="play-again-btn" class="action-btn primary-button">Play Again</button>
+                    <button id="new-quiz-from-results-btn" class="action-btn">New Quiz</button>
+                    <button id="back-to-main-from-results-btn" class="action-btn">Main Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="about-modal" class="modal-overlay">
+        <div id="about-modal-content" class="modal-content">
+            <h2>About this App</h2>
+            <p>Created by Robin Sipos. For questions or feedback, please get in touch.</p>
+            <p><strong>Email:</strong> <a href="mailto:robinsiposw@gmail.com">robinsiposw@gmail.com</a></p>
+            <button id="close-about-btn" class="action-btn primary-button" style="margin-top: 1rem;">Close</button>
+        </div>
+    </div>
+
+    <div id="hint-window" class="modal-overlay">
+         <div class="modal-content">
+            <h3>Hint</h3>
+            <p id="hint-explanation"></p>
+            <p id="fun-fact"></p>
+            <button id="close-hint-btn" class="action-btn primary-button">Next Question</button>
+        </div>
+    </div>
+
+    <div id="confirm-quit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Confirm Quit</h2>
+            <p>Are you sure you want to end the current quiz? Your progress will be lost.</p>
+            <div class="modal-actions">
+                <button id="cancel-quit-btn" class="action-btn">Cancel</button>
+                <button id="confirm-quit-btn" class="action-btn danger-button">End Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Module 1: Data Management ---
+            const DataManager = (() => {
+                const vocab = {
+                    hsk1: [
+                        { simplified: "爱", pinyin: "ài", answer: "to love", explanation: "The character 爱 (ài) is crucial in words like 'lover' (爱人 àirén) and 'hobby' (爱好 àihào).", funFact: "The traditional character 愛 has a heart (心) in its center, symbolizing that love comes from the heart." },
+                        { simplified: "八", pinyin: "bā", answer: "eight" }, 
+                        { simplified: "爸爸", pinyin: "bàba", answer: "father" },
+                        { simplified: "杯子", pinyin: "bēizi", answer: "cup; glass", explanation: "杯子 (bēizi) is a general term for any drinking cup or glass.", funFact: "It's often said '多喝水' (duō hē shuǐ), meaning 'drink more water', for good health." }, 
+                        { simplified: "北京", pinyin: "Běijīng", answer: "Beijing", explanation: "北京 (Běijīng) is the capital of China, a historical and cultural center.", funFact: "'Beijing' means 'northern capital', while 'Nanjing' (南京) means 'southern capital'." }, 
+                        { simplified: "本", pinyin: "běn", answer: "measure word for books", explanation: "本 (běn) is a measure word used for books, notebooks, and other bound items.", funFact: "The character 本 originally depicted the root of a tree, hence its meaning of 'root' or 'basis'." },
+                        { simplified: "不客气", pinyin: "bú kèqi", answer: "you're welcome; don't be polite", explanation: "不客气 (bú kèqi) is a polite response to 'thank you'.", funFact: "It literally means 'don't be polite' or 'don't stand on ceremony'." }, 
+                        { simplified: "不", pinyin: "bù", answer: "no; not", explanation: "不 (bù) is a negative adverb placed before verbs and adjectives.", funFact: "When 不 precedes a fourth tone, its pronunciation changes to bú." }, 
+                        { simplified: "菜", pinyin: "cài", answer: "dish; vegetable", explanation: "菜 (cài) can refer to a specific dish/course or vegetables in general.", funFact: "In Chinese dining culture, meals often consist of several dishes served with rice (米饭 mǐfàn)." },
+                        { simplified: "茶", pinyin: "chá", answer: "tea", explanation: "茶 (chá) is the general term for tea, a very important beverage in China.", funFact: "Tea became popular in China during the Tang Dynasty and is still one of its main exports." }, 
+                        { simplified: "吃", pinyin: "chī", answer: "to eat", explanation: "A common greeting in China is '你吃了吗?' (Nǐ chīle ma?), meaning 'Have you eaten yet?'.", funFact: "The word for 'jealousy' is 吃醋 (chīcù), which literally means 'to eat vinegar'!" }, 
+                        { simplified: "出租车", pinyin: "chūzūchē", answer: "taxi", explanation: "出租车 (chūzūchē) literally means 'rented car'. 出租 (chūzū) means 'to rent out', and 车 (chē) means 'car'.", funFact: "In many Chinese cities, taxis come in various colors, often corresponding to different companies or districts." },
+                        { simplified: "打电话", pinyin: "dǎ diànhuà", answer: "to make a phone call", explanation: "打电话 (dǎ diànhuà) literally means 'to strike electric speech'.", funFact: "The character '打' (dǎ) is used with many actions, such as playing sports (打篮球 dǎ lánqiú) or even fighting (打架 dǎjià)." }, 
+                        { simplified: "大", pinyin: "dà", answer: "big; large", explanation: "大 (dà) is the opposite of 'small' (小 xiǎo).", funFact: "The character visually represents a person standing with outstretched arms, symbolizing 'largeness'." }, 
+                        { simplified: "的", pinyin: "de", answer: "possessive particle", explanation: "的 (de) is the most common particle, expressing possession, description, or an adjectival modifier.", funFact: "There are three different 'de' particles in Chinese (的, 地, 得), each with distinct uses." },
+                        { simplified: "点", pinyin: "diǎn", answer: "o'clock; dot; point", explanation: "点 (diǎn) is used to indicate a specific time, as in 'o'clock', but can also mean 'dot' or 'a little bit'.", funFact: "The phrase '一点点' (yī diǎndiǎn) literally means 'a small dot' and is used to mean 'a little bit'." }, 
+                        { simplified: "电脑", pinyin: "diànnǎo", answer: "computer", explanation: "电脑 (diànnǎo) literally means 'electric brain'.", funFact: "The character 脑 (nǎo) means 'brain', referring to the computing power of a computer." }, 
+                        { simplified: "电视", pinyin: "diànshì", answer: "television", explanation: "电视 (diànshì) literally means 'electric vision'.", funFact: "TV series, especially historical and fantasy dramas, are extremely popular in China." },
+                        { simplified: "电影", pinyin: "diànyǐng", answer: "movie; film", explanation: "电影 (diànyǐng) literally means 'electric shadow'.", funFact: "Chinese cinema has a rich history and a growing presence in the global film industry." }, 
+                        { simplified: "东西", pinyin: "dōngxi", answer: "thing; stuff", explanation: "东西 (dōngxi) literally means 'east-west'. It refers to general 'things' or 'stuff'.", funFact: "There are many theories why 'east-west' became 'thing', one being that markets traditionally located in the east and west of a city were where goods were traded." }, 
+                        { simplified: "都", pinyin: "dōu", answer: "all; both; entirely", explanation: "都 (dōu) is an adverb meaning 'all' or 'both', placed before the verb.", funFact: "It's a very common character and key to expressing totality or inclusiveness in Chinese sentences." },
+                        { simplified: "读", pinyin: "dú", answer: "to read; to study", explanation: "读 (dú) can mean both to read aloud and to study.", funFact: "In traditional Chinese education, students often read texts aloud to memorize them." }, 
+                        { simplified: "对不起", pinyin: "duìbuqǐ", answer: "sorry", explanation: "对不起 (duìbuqǐ) is a polite way to apologize.", funFact: "The phrase literally means 'cannot face you', referring to a feeling of shame." }, 
+                        { simplified: "多", pinyin: "duō", answer: "many; much", explanation: "多 (duō) means 'many' or 'much', the opposite of 'few' (少 shǎo).", funFact: "It is often used in expressions like '多谢' (duōxiè), meaning 'many thanks'." },
+                        { simplified: "多少", pinyin: "duōshao", answer: "how many; how much", explanation: "多少 (duōshao) literally 'many few', used to ask about quantity.", funFact: "Unlike English, Chinese does not differentiate between countable and uncountable nouns when using 多少 to ask about quantity." }, 
+                        { simplified: "儿子", pinyin: "érzi", answer: "son", explanation: "儿子 (érzi) is the polite term for 'son'.", funFact: "In traditional Chinese culture, male heirs were often given significant importance." }, 
+                        { simplified: "二", pinyin: "èr", answer: "two", explanation: "二 (èr) is used for counting and in numbers, while 两 (liǎng) is used before measure words.", funFact: "The number two is considered lucky in some contexts, symbolizing balance and harmony." },
+                        { simplified: "饭店", pinyin: "fàndiàn", answer: "restaurant; hotel", explanation: "饭店 (fàndiàn) can mean both a restaurant and a hotel, especially one with dining facilities.", funFact: "The character 饭 (fàn) means cooked rice, which is a staple food in China, hence its association with eating establishments." }, 
+                        { simplified: "飞机", pinyin: "fēijī", answer: "airplane", explanation: "飞机 (fēijī) literally means 'flying machine'.", funFact: "China has invested heavily in its aviation infrastructure in recent decades." }, 
+                        { simplified: "分钟", pinyin: "fēnzhōng", answer: "minute", explanation: "分钟 (fēnzhōng) indicates duration in minutes.", funFact: "Chinese time expressions often use a 'hour + minute' structure, e.g., '三点半' (sān diǎn bàn) for 3:30." },
+                        { simplified: "高兴", pinyin: "gāoxìng", answer: "happy; pleased", explanation: "高兴 (gāoxìng) is a common way to express happiness or pleasure, often used in greetings like '很高兴认识你' (Hěn gāoxìng rènshi nǐ - Nice to meet you).", funFact: "The character 高 (gāo) means 'high', suggesting a 'high mood' when one is happy." }, 
+                        { simplified: "个", pinyin: "gè", answer: "general measure word", explanation: "个 (gè) is the most common measure word in Chinese and can be used for many nouns when no specific measure word is known.", funFact: "Using the correct measure word is essential for natural-sounding Chinese, though '个' is a safe default." }, 
+                        { simplified: "工作", pinyin: "gōngzuò", answer: "work; to work", explanation: "工作 (gōngzuò) can be both a noun (work) and a verb (to work).", funFact: "Chinese work ethic is generally highly regarded, and long working hours are common in some industries." },
+                        { simplified: "狗", pinyin: "gǒu", answer: "dog", explanation: "狗 (gǒu) is the general term for 'dog'.", funFact: "Dogs are increasingly popular as pets in Chinese cities, shifting from their traditional roles." }, 
+                        { simplified: "汉语", pinyin: "Hànyǔ", answer: "Chinese language", explanation: "汉语 (Hànyǔ) specifically refers to the Han language, which is the most widely spoken language group in China.", funFact: "Han Chinese people form the largest ethnic group in China, hence the name 'Han language'." }, 
+                        { simplified: "好", pinyin: "hǎo", answer: "good; well; okay", explanation: "好 (hǎo) means 'good', 'well', or 'okay'. It's a very versatile character.", funFact: "It's often used with reduplication, as in '好好儿的' (hǎohāor de), meaning 'very well' or 'in good order'." },
+                        { simplified: "喝", pinyin: "hē", answer: "to drink", explanation: "喝 (hē) is used for drinking any liquid.", funFact: "Drinking hot water is a deeply ingrained habit in China, believed to be beneficial for health." }, 
+                        { simplified: "和", pinyin: "hé", answer: "and; with", explanation: "和 (hé) connects nouns, or means 'with' when preceding a person.", funFact: "This is one of the most basic and frequently used conjunctions." }, 
+                        { simplified: "很", pinyin: "hěn", answer: "very", explanation: "很 (hěn) is a common adverb of degree, usually placed before adjectives.", funFact: "It is grammatically common in Chinese to use 很 even if not meaning 'very', as an adjective alone without 很 can sound blunt." },
+                        { simplified: "后面", pinyin: "hòumiàn", answer: "behind; back; later", explanation: "后面 (hòumiàn) indicates the back or behind of spaces or sequences.", funFact: "Chinese directional indicators often include the character 面 (miàn), meaning 'side' or 'surface'." }, 
+                        { simplified: "回", pinyin: "huí", answer: "to return", explanation: "回 (huí) means 'to return' or 'to go back', often used as a verb of motion.", funFact: "It also serves as a measure word for occurrences or chapters." }, 
+                        { simplified: "会", pinyin: "huì", answer: "can (learned skill); likely to; to meet", explanation: "会 (huì) can mean one is able to do something (through learning), something is likely to happen, or 'to meet'.", funFact: "Chinese has distinct verbs for different types of 'knowing': 会 (ability), 能 (possibility), and 可以 (permission)." },
+                        { simplified: "火车站", pinyin: "huǒchēzhàn", answer: "train station", explanation: "火车站 (huǒchēzhàn) literally means 'fire car station', referring to steam trains.", funFact: "China has the largest high-speed rail network in the world." }, 
+                        { simplified: "几", pinyin: "jǐ", answer: "how many (small number)", explanation: "几 (jǐ) means 'how many', but typically refers to a small number of things (usually under 10).", funFact: "In contrast to '多少' (duōshao), which is used for larger quantities." }, 
+                        { simplified: "家", pinyin: "jiā", answer: "home; family", explanation: "家 (jiā) can also be a measure word for businesses, like 'a restaurant' (一家饭店 yì jiā fàndiàn).", funFact: "The character depicts a pig (豕) under a roof (宀). In ancient China, having a pig in the house was a sign of a prosperous home." },
+                        { simplified: "叫", pinyin: "jiào", answer: "to call; to be called", explanation: "叫 (jiào) means 'to call', 'to shout', or 'to be called'.", funFact: "It's used to state your name: '我叫...' (Wǒ jiào... - My name is...)." }, 
+                        { simplified: "今天", pinyin: "jīntiān", answer: "today", explanation: "今天 (jīntiān) is the word for 'today', compared to 'tomorrow' (明天 míngtiān) and 'yesterday' (昨天 zuótiān).", funFact: "The character '天' (tiān) also carries the meaning of 'sky' or 'day'." }, 
+                        { simplified: "九", pinyin: "jiǔ", answer: "nine" },
+                        { simplified: "开", pinyin: "kāi", answer: "to open; to drive (a car)", explanation: "开 (kāi) means 'to open' (a door, a shop), or 'to drive' (a car).", funFact: "It's a very versatile verb, often used to mean 'to start' or 'to switch on' as well." }, 
+                        { simplified: "看", pinyin: "kàn", answer: "to look; to watch; to read; to see", explanation: "看 (kàn) means 'to look', 'to watch' (a movie), 'to read' (a book), or 'to see'.", funFact: "It's often used to mean 'to try' as well: '看看' (kànkan), meaning 'let's see' or 'give it a try'." }, 
+                        { simplified: "看见", pinyin: "kànjiàn", answer: "to see (resultative)", explanation: "看见 (kànjiàn) means 'to see' or 'to perceive' as a completed action.", funFact: "The '见' (jiàn) here is a resultative complement, indicating that as a result of 'looking' (看), you 'saw' something." },
+                        { simplified: "块", pinyin: "kuài", answer: "yuan (money unit)", explanation: "块 (kuài) is the colloquial measure word for Chinese currency, yuan (元 yuán).", funFact: "It's common for prices to be quoted in 'kuai' in shops rather than 'yuan'." }, 
+                        { simplified: "来", pinyin: "lái", answer: "to come", explanation: "来 (lái) is the verb 'to come', indicating motion towards the speaker.", funFact: "It's often used in commands like '快来!' (Kuài lái! - Come quickly!)." }, 
+                        { simplified: "老师", pinyin: "lǎoshī", answer: "teacher", explanation: "老师 (lǎoshī) means 'teacher', a respectful form of address for educators.", funFact: "Teachers in China are highly respected members of society." },
+                        { simplified: "了", pinyin: "le", answer: "past tense particle", explanation: "了 (le) is a particle placed after verbs to indicate completed action or a change of state.", funFact: "It is one of the most frequently used particles in Chinese." }, 
+                        { simplified: "冷", pinyin: "lěng", answer: "cold", explanation: "冷 (lěng) is the opposite of 'hot' (热 rè).", funFact: "Winter cold can be extremely severe in northern China, often with sub-zero temperatures." }, 
+                        { simplified: "里", pinyin: "lǐ", answer: "inside; in", explanation: "里 (lǐ) means 'inside' or 'in', contrasting with 'outside' (外 wài).", funFact: "It is used to describe locations, such as '家里' (jiālǐ - at home)." },
+                        { simplified: "六", pinyin: "liù", answer: "six" }, 
+                        { simplified: "妈妈", pinyin: "māma", answer: "mother" }, 
+                        { simplified: "吗", pinyin: "ma", answer: "question particle", explanation: "吗 (ma) is a question particle placed at the end of a declarative sentence to turn it into a yes/no question.", funFact: "It does not change the tone of the sentence." },
+                        { simplified: "买", pinyin: "mǎi", answer: "to buy", explanation: "买 (mǎi) is the opposite of 'to sell' (卖 mài).", funFact: "Chinese shopping culture is very diverse, from traditional markets to modern shopping malls." }, 
+                        { simplified: "猫", pinyin: "māo", answer: "cat", explanation: "猫 (māo) is the word for 'cat'.", funFact: "Cats have become popular pets in China in recent times." }, 
+                        { simplified: "没关系", pinyin: "méi guānxi", answer: "it's okay; never mind", explanation: "没关系 (méi guānxi) means 'it doesn't matter', 'never mind', or 'it's okay', used as a response to an apology.", funFact: "It's often used as part of Chinese politeness to avoid conflict." },
+                        { simplified: "没有", pinyin: "méiyǒu", answer: "don't have; there isn't", explanation: "没有 (méiyǒu) means 'don't have' or 'not possess', the negative form of 'to have' (有 yǒu).", funFact: "It is also used to negate a completed action, e.g., '我没有吃' (Wǒ méiyǒu chī - I haven't eaten)." }, 
+                        { simplified: "米饭", pinyin: "mǐfàn", answer: "cooked rice", explanation: "米饭 (mǐfàn) specifically refers to cooked rice.", funFact: "Rice is the staple food in southern China, while noodles and bread are more common in the north." }, 
+                        { simplified: "明天", pinyin: "míngtiān", answer: "tomorrow", explanation: "明天 (míngtiān) is the word for 'tomorrow', compared to 'today' (今天 jīntiān) and 'yesterday' (昨天 zuótiān).", funFact: "The character 明 (míng) is a combination of sun (日 rì) and moon (月 yuè), giving it the meaning of 'bright' or 'next'." },
+                        { simplified: "名字", pinyin: "míngzi", answer: "name", explanation: "名字 (míngzi) is the word for 'name'.", funFact: "Chinese names typically start with the family name, followed by the given name." }, 
+                        { simplified: "哪", pinyin: "nǎ", answer: "which", explanation: "哪 (nǎ) is an interrogative pronoun meaning 'which', used when there's a choice involved.", funFact: "It's often followed by a measure word, e.g., '哪国人?' (nǎ guórén? - Which nationality?)" }, 
+                        { simplified: "那", pinyin: "nà", answer: "that; there", explanation: "那 (nà) means 'that' or 'there', referring to something at a distance.", funFact: "It's often paired with '这' (zhè - this/here) to express proximity and distance." },
+                        { simplified: "呢", pinyin: "ne", answer: "question particle (reiterating)", explanation: "呢 (ne) is a question particle often used to reiterate a question or inquire about someone's status.", funFact: "For example: '你呢?' (Nǐ ne? - How about you?)" }, 
+                        { simplified: "能", pinyin: "néng", answer: "can; able to (physical ability)", explanation: "能 (néng) means 'can' or 'to be able to do something' (physical capability or possibility).", funFact: "It differs from '会' (huì), which refers to learned abilities." }, 
+                        { simplified: "你", pinyin: "nǐ", answer: "you" },
+                        { simplified: "年", pinyin: "nián", answer: "year", explanation: "年 (nián) is the word for 'year'.", funFact: "The Chinese calendar is a lunisolar calendar, and each year has an animal zodiac sign." }, 
+                        { simplified: "女儿", pinyin: "nǚ'ér", answer: "daughter", explanation: "女儿 (nǚ'ér) is the word for 'daughter'.", funFact: "The character 奴 (nú) means 'girl' and 儿 (ér) means 'child'." }, 
+                        { simplified: "朋友", pinyin: "péngyou", answer: "friend", explanation: "朋友 (péngyou) is the word for 'friend'.", funFact: "Friendship (友谊 yǒuyì) is highly valued in China, often signifying strong bonds." },
+                        { simplified: "漂亮", pinyin: "piàoliang", answer: "beautiful; pretty", explanation: "漂亮 (piàoliang) means 'beautiful' or 'pretty', often a compliment for women or objects.", funFact: "Chinese aesthetics often emphasize harmony and naturalness." }, 
+                        { simplified: "苹果", pinyin: "píngguǒ", answer: "apple", explanation: "苹果 (píngguǒ) literally means 'peace fruit'.", funFact: "Apples are a popular and healthy fruit in China." }, 
+                        { simplified: "七", pinyin: "qī", answer: "seven" },
+                        { simplified: "钱", pinyin: "qián", answer: "money", explanation: "钱 (qián) is the word for 'money'.", funFact: "China is a leading country in mobile payments, with cash use becoming increasingly rare." }, 
+                        { simplified: "前面", pinyin: "qiánmiàn", answer: "front; in front", explanation: "前面 (qiánmiàn) means 'front' or 'in front of', for spaces or sequences.", funFact: "It's the opposite of '后面' (hòumiàn - back/behind)." }, 
+                        { simplified: "请", pinyin: "qǐng", answer: "please; to invite", explanation: "请 (qǐng) means 'please' or 'to invite', a polite expression.", funFact: "It's often used when inviting people to meals or events." },
+                        { simplified: "去", pinyin: "qù", answer: "to go", explanation: "去 (qù) is the verb 'to go', indicating motion away from the speaker.", funFact: "It's often paired with other verbs to express purpose of action, e.g., '去吃饭' (qù chīfàn - to go eat)." }, 
+                        { simplified: "热", pinyin: "rè", answer: "hot; warm", explanation: "热 (rè) is the opposite of 'cold' (冷 lěng).", funFact: "Summers in some parts of China can be extremely hot and humid." }, 
+                        { simplified: "人", pinyin: "rén", answer: "person; people", explanation: "人 (rén) is the word for 'person' or 'people'.", funFact: "It is one of the most frequently used characters in Chinese." },
+                        { simplified: "认识", pinyin: "rènshi", answer: "to know (a person); to recognize", explanation: "认识 (rènshi) means 'to know' (a person, a place), as opposed to 'to know' (知道 zhīdào) information.", funFact: "It's common to say '很高兴认识你' (hěn gāoxìng rènshi nǐ - Nice to meet you) upon first meeting." }, 
+                        { simplified: "日", pinyin: "rì", answer: "day; sun", explanation: "日 (rì) means 'day' or 'sun', often used in calendar dates.", funFact: "The character visually represents a stylized sun." }, 
+                        { simplified: "三", pinyin: "sān", answer: "three" },
+                        { simplified: "商店", pinyin: "shāngdiàn", answer: "shop; store", explanation: "商店 (shāngdiàn) is a general term for 'shop' or 'store'.", funFact: "China has a wide variety of shops, from small local businesses to large department stores." }, 
+                        { simplified: "上", pinyin: "shàng", answer: "up; above; on", explanation: "上 (shàng) means 'up', 'above', or 'on', referring to location or direction.", funFact: "It's often used with actions, like '上课' (shàngkè - to attend class)." }, 
+                        { simplified: "上午", pinyin: "shàngwǔ", answer: "morning", explanation: "上午 (shàngwǔ) is the morning period, the time between dawn and noon.", funFact: "Chinese daily schedules often revolve around three main meals, with morning marking the period between breakfast and lunch." },
+                        { simplified: "少", pinyin: "shǎo", answer: "few; less", explanation: "少 (shǎo) means 'few' or 'less', the opposite of 'many' (多 duō).", funFact: "It's often used in conjunction with '不客气' (bú kèqi) meaning 'don't be formal'." }, 
+                        { simplified: "谁", pinyin: "shéi", answer: "who", explanation: "谁 (shéi) is an interrogative pronoun meaning 'who' or 'whom'.", funFact: "There is no gender distinction in personal pronouns like in English." }, 
+                        { simplified: "什么", pinyin: "shénme", answer: "what", explanation: "什么 (shénme) is an interrogative pronoun meaning 'what'.", funFact: "It's very versatile and often used to express surprise as well." },
+                        { simplified: "十", pinyin: "shí", answer: "ten" }, 
+                        { simplified: "时候", pinyin: "shíhou", answer: "time; moment", explanation: "时候 (shíhou) means 'time' or 'moment', referring to a point in time.", funFact: "It's often used as a time word, like '什么时候?' (shénme shíhou? - When?)" }, 
+                        { simplified: "是", pinyin: "shì", answer: "to be (verb)", explanation: "是 (shì) is the verb 'to be', expressing identification, definition, or quality.", funFact: "Unlike English, Chinese does not use 'to be' with adjectives, but rather '很' (hěn) or just the adjective itself." },
+                        { simplified: "书", pinyin: "shū", answer: "book", explanation: "书 (shū) is the word for 'book'.", funFact: "Reading and learning are highly valued in China as keys to progress." }, 
+                        { simplified: "水", pinyin: "shuǐ", answer: "water", explanation: "水 (shuǐ) is the word for 'water'.", funFact: "Water is an important element in Chinese culture and philosophy (e.g., Feng Shui)." }, 
+                        { simplified: "水果", pinyin: "shuǐguǒ", answer: "fruit", explanation: "水果 (shuǐguǒ) literally means 'water fruit', referring to the juicy nature of most fruits.", funFact: "It's common in China to offer peeled and cut fruit to guests as a sign of hospitality." },
+                        { simplified: "睡觉", pinyin: "shuìjiào", answer: "to sleep", explanation: "睡觉 (shuìjiào) means 'to sleep', literally 'sleep sleep'.", funFact: "Napping (午睡, wǔshuì) is a common practice in China, especially among students and workers." }, 
+                        { simplified: "说", pinyin: "shuō", answer: "to speak; to say", explanation: "说 (shuō) is the verb 'to speak' or 'to say'.", funFact: "It's often used in dialogues, like '说汉语' (shuō Hànyǔ - to speak Chinese)." }, 
+                        { simplified: "四", pinyin: "sì", answer: "four" },
+                        { simplified: "岁", pinyin: "suì", answer: "years old (age)", explanation: "岁 (suì) is a measure word used to indicate age, meaning 'years old'.", funFact: "In China, traditionally people become one year older at Lunar New Year, regardless of their actual birthdate." }, 
+                        { simplified: "他", pinyin: "tā", answer: "he; him", explanation: "他 (tā) is the male personal pronoun 'he' or 'him'.", funFact: "In Mandarin Chinese, 他 (tā), 她 (tā), and 它 (tā) all sound the same but are written with different characters to distinguish gender and objects." }, 
+                        { simplified: "她", pinyin: "tā", answer: "she; her", explanation: "她 (tā) is the female personal pronoun 'she' or 'her'.", funFact: "The left radical of the character indicates the female gender." },
+                        { simplified: "太", pinyin: "tài", answer: "too; extremely", explanation: "太 (tài) is an adverb of degree meaning 'too' or 'extremely', often with an emotional nuance.", funFact: "It's frequently used with the particle '了' (le), as in '太好了!' (Tài hǎo le! - That's great!)." }, 
+                        { simplified: "天气", pinyin: "tiānqì", answer: "weather", explanation: "天气 (tiānqì) is the word for 'weather'.", funFact: "China has extremely diverse weather due to its vast area, from desert regions to tropical climates." }, 
+                        { simplified: "听", pinyin: "tīng", answer: "to listen; to hear", explanation: "听 (tīng) is the verb 'to listen' or 'to hear'.", funFact: "It's often used in the phrase '听音乐' (tīng yīnyuè - to listen to music)." },
+                        { simplified: "同学", pinyin: "tóngxué", answer: "classmate; student", explanation: "同学 (tóngxué) means 'classmate' or 'schoolmate', a common address in schools and universities.", funFact: "The character '同' (tóng) means 'same' or 'together'." }, 
+                        { simplified: "喂", pinyin: "wèi", answer: "hello (on phone)", explanation: "喂 (wèi) is the word for 'hello' used when answering a phone call.", funFact: "It is one of the most common first words spoken when answering a phone in China." }, 
+                        { simplified: "我", pinyin: "wǒ", answer: "I; me" },
+                        { simplified: "我们", pinyin: "wǒmen", answer: "we; us", explanation: "我们 (wǒmen) is the personal pronoun 'we' or 'us', referring to multiple people including the speaker.", funFact: "Chinese pronouns do not have distinct cases (subject, object, etc.); their role is inferred from context." }, 
+                        { simplified: "五", pinyin: "wǔ", answer: "five" }, 
+                        { simplified: "喜欢", pinyin: "xǐhuan", answer: "to like; to prefer", explanation: "喜欢 (xǐhuan) is a verb meaning 'to like' or 'to prefer'.", funFact: "It's a very common way to express your interest in something." },
+                        { simplified: "下", pinyin: "xià", answer: "down; below; under", explanation: "下 (xià) means 'down', 'below', or 'under', referring to location or direction.", funFact: "It's the opposite of '上' (shàng - up/above)." }, 
+                        { simplified: "下午", pinyin: "xiàwǔ", answer: "afternoon", explanation: "下午 (xiàwǔ) is the afternoon period, the time between noon and evening.", funFact: "Many Chinese cities remain bustling with activity in the afternoon." }, 
+                        { simplified: "下雨", pinyin: "xià yǔ", answer: "to rain", explanation: "下雨 (xià yǔ) literally means 'to fall rain', which is the expression for 'to rain'.", funFact: "Other verbs are used to express raining of other precipitation, such as '下雪' (xià xuě - to snow)." },
+                        { simplified: "先生", pinyin: "xiānsheng", answer: "Mister; husband; teacher", explanation: "先生 (xiānsheng) means 'Mister' or 'husband', a polite form of address for men.", funFact: "Historically, it was more widely used for teachers, but now it's a general respectful address." }, 
+                        { simplified: "现在", pinyin: "xiànzài", answer: "now", explanation: "现在 (xiànzài) is the time adverb 'now'.", funFact: "In Chinese sentences, time adverbs can be flexibly placed, typically after or before the subject." }, 
+                        { simplified: "想", pinyin: "xiǎng", answer: "to want; to think; to miss", explanation: "想 (xiǎng) is a versatile verb meaning 'to want', 'to think', or 'to miss'.", funFact: "Its meaning can vary significantly depending on context." },
+                        { simplified: "小", pinyin: "xiǎo", answer: "small; little", explanation: "小 (xiǎo) means 'small' or 'little', the opposite of 'big' (大 dà).", funFact: "It's often used as an adjective, like '小孩儿' (xiǎoháir - little child)." }, 
+                        { simplified: "小姐", pinyin: "xiǎojie", answer: "Miss", explanation: "小姐 (xiǎojie) means 'Miss', a polite form of address for young women.", funFact: "It's less commonly used in modern China and can be misunderstood in certain contexts; '女士' (nǚshì - lady) is often preferred." }, 
+                        { simplified: "些", pinyin: "xiē", answer: "some; a few", explanation: "些 (xiē) is a measure word meaning 'some' or 'a few' before nouns.", funFact: "It's found in phrases like '这些' (zhèxiē - these) and '那些' (nàxiē - those)." },
+                        { simplified: "写", pinyin: "xiě", answer: "to write", explanation: "写 (xiě) is the verb 'to write'.", funFact: "The Chinese writing system, Hanzi, consists of thousands of characters, each with its own meaning." }, 
+                        { simplified: "谢谢", pinyin: "xièxie", answer: "thank you", explanation: "谢谢 (xièxie) is the word for 'thank you'.", funFact: "Expressing gratitude is very important for politeness in Chinese culture." }, 
+                        { simplified: "星期", pinyin: "xīngqī", answer: "week", explanation: "星期 (xīngqī) is the unit of time 'week'.", funFact: "Days of the week are indicated by a number after 星期, e.g., 星期一 (xīngqī yī - Monday)." },
+                        { simplified: "学生", pinyin: "xuésheng", answer: "student", explanation: "学生 (xuésheng) is the word for 'student'.", funFact: "The Chinese education system places great emphasis on academic achievement." }, 
+                        { simplified: "学习", pinyin: "xuéxí", answer: "to study; to learn", explanation: "学习 (xuéxí) is the verb 'to study' or 'to learn', implying broader academic study than '读' (dú - to read/study).", funFact: "The characters literally mean 'study' and 'practice'." }, 
+                        { simplified: "学校", pinyin: "xuéxiào", answer: "school", explanation: "学校 (xuéxiào) is the word for 'school'.", funFact: "China is known for its significant investments in education." },
+                        { simplified: "一", pinyin: "yī", answer: "one" }, 
+                        { simplified: "衣服", pinyin: "yīfu", answer: "clothes", explanation: "衣服 (yīfu) is the general term for 'clothes' or 'clothing'.", funFact: "Traditional Chinese clothing, like the qipao, is an important part of Chinese culture." }, 
+                        { simplified: "医生", pinyin: "yīshēng", answer: "doctor", explanation: "医生 (yīshēng) is the word for 'doctor'.", funFact: "Traditional Chinese Medicine (TCM) has been an important part of Chinese healthcare for thousands of years." },
+                        { simplified: "医院", pinyin: "yīyuàn", answer: "hospital", explanation: "医院 (yīyuàn) is the word for 'hospital'.", funFact: "Hospitals in China can often be very crowded, and many people also seek traditional medicine." }, 
+                        { simplified: "椅子", pinyin: "yǐzi", answer: "chair", explanation: "椅子 (yǐzi) is the word for 'chair'.", funFact: "Chinese furniture is often made of wood and characterized by simple, functional designs." }, 
+                        { simplified: "有", pinyin: "yǒu", answer: "to have; there is/are", explanation: "有 (yǒu) is the verb 'to have' or 'there is/are'.", funFact: "Its negative form is '没有' (méiyǒu)." },
+                        { simplified: "月", pinyin: "yuè", answer: "month; moon", explanation: "月 (yuè) means 'month' or 'moon'.", funFact: "The Chinese calendar is a lunisolar calendar, and many festivals are tied to lunar cycles." }, 
+                        { simplified: "再见", pinyin: "zàijiàn", answer: "goodbye", explanation: "再见 (zàijiàn) literally 'again see', which is the expression for 'goodbye'.", funFact: "It is one of the most common farewell expressions in China." }, 
+                        { simplified: "在", pinyin: "zài", answer: "at; in; on; to be present", explanation: "在 (zài) is a preposition meaning 'at', 'in', 'on', or a verb meaning 'to be present'.", funFact: "It is very versatile and often used to express ongoing actions as well." },
+                        { simplified: "怎么", pinyin: "zěnme", answer: "how; why", explanation: "怎么 (zěnme) is an interrogative pronoun meaning 'how' or 'why'.", funFact: "It's used to ask for directions: '怎么去?' (zěnme qù? - How to get there?)." }, 
+                        { simplified: "怎么样", pinyin: "zěnmeyàng", answer: "how is it?; how about?", explanation: "怎么样 (zěnmeyàng) means 'how is it?' or 'how about?', expressing inquiry.", funFact: "It's often used to ask for suggestions or opinions." }, 
+                        { simplified: "这", pinyin: "zhè", answer: "this; here", explanation: "这 (zhè) means 'this' or 'here', referring to something nearby.", funFact: "It's often paired with '那' (nà - that/there) to express proximity and distance." },
+                        { simplified: "中国", pinyin: "Zhōngguó", answer: "China", explanation: "中国 (Zhōngguó) literally means 'Middle Kingdom'.", funFact: "The Chinese traditionally believed China to be the center of the world, hence the name." }, 
+                        { simplified: "中午", pinyin: "zhōngwǔ", answer: "noon", explanation: "中午 (zhōngwǔ) is the time period of 'noon'.", funFact: "In China, noon is typically lunchtime." }, 
+                        { simplified: "住", pinyin: "zhù", answer: "to live; to reside", explanation: "住 (zhù) is the verb 'to live' or 'to reside'.", funFact: "It's common to ask: '你住在哪儿?' (Nǐ zhù zài nǎr? - Where do you live?)." },
+                        { simplified: "桌子", pinyin: "zhuōzi", answer: "table", explanation: "桌子 (zhuōzi) is the word for 'table'.", funFact: "In Chinese households, the table is often a central gathering place for meals and family." }, 
+                        { simplified: "字", pinyin: "zì", answer: "character; word", explanation: "字 (zì) means 'character' or 'word', especially referring to written Chinese characters.", funFact: "Each Chinese character has its own meaning and usually its own way of writing." }, 
+                        { simplified: "昨天", pinyin: "zuótiān", answer: "yesterday", explanation: "昨天 (zuótiān) is the time adverb 'yesterday'.", funFact: "The character '昨' (zuó) means 'past' or 'previous'." },
+                        { simplified: "坐", pinyin: "zuò", answer: "to sit", explanation: "坐 (zuò) is the verb 'to sit'.", funFact: "A polite invitation is '请坐' (qǐng zuò - Please sit down)." }, 
+                        { simplified: "做", pinyin: "zuò", answer: "to do; to make", explanation: "做 (zuò) is a verb meaning 'to do' or 'to make', widely used.", funFact: "It's used for cooking, working, or any activity." }
+                    ],
+                    hsk2: [
+                        { simplified: "吧", pinyin: "ba", answer: "suggestion particle", explanation: "吧 (ba) is a modal particle used at the end of a sentence to indicate a suggestion, agreement, or confirmation.", funFact: "It softens the tone of a sentence, making it sound more friendly or less direct." },
+                        { simplified: "白", pinyin: "bái", answer: "white", explanation: "白 (bái) is the color white.", funFact: "In Chinese culture, white is often associated with mourning and purity." },
+                        { simplified: "帮助", pinyin: "bāngzhù", answer: "to help", explanation: "帮助 (bāngzhù) can be a verb (我帮助你) and a noun (我需要你的帮助).", funFact: "The character 帮 (bāng) originally depicted a net and a cloth, suggesting 'assisting' someone by lending a hand or tool." },
+                        { simplified: "报纸", pinyin: "bàozhǐ", answer: "newspaper", explanation: "报纸 (bàozhǐ) combines 'report' (报 bào) and 'paper' (纸 zhǐ).", funFact: "Despite the rise of digital media, newspapers still have a significant readership in China, especially among older generations." },
+                        { simplified: "比", pinyin: "bǐ", answer: "to compare; than", explanation: "比 (bǐ) is used to make comparisons, similar to 'than' in English.", funFact: "The structure A 比 B + Adjective is fundamental for comparative sentences." },
+                        { simplified: "别", pinyin: "bié", answer: "don't; other", explanation: "别 (bié) can mean 'don't' (as an imperative) or 'other'.", funFact: "When used as 'don't', it often implies a gentle warning." },
+                        { simplified: "长", pinyin: "cháng", answer: "long", explanation: "长 (cháng) describes length.", funFact: "This character has another pronunciation, zhǎng, meaning 'to grow' or 'elder'." },
+                        { simplified: "唱歌", pinyin: "chànggē", answer: "to sing (a song)", explanation: "唱歌 (chànggē) combines 'to sing' (唱 chàng) and 'song' (歌 gē).", funFact: "Karaoke (KTV) is a hugely popular social activity in China." },
+                        { simplified: "出", pinyin: "chū", answer: "to go out; to exit", explanation: "出 (chū) indicates movement out of a place.", funFact: "It's a simple yet very common character, often seen on signs for exits." },
+                        { simplified: "穿", pinyin: "chuān", answer: "to wear; to put on", explanation: "穿 (chuān) is used for wearing clothes, shoes, or accessories.", funFact: "Unlike English, Chinese has different verbs for 'wearing' (穿 chuān) and 'putting on' (戴 dài for accessories, or 穿 for clothes)." },
+                        { simplified: "次", pinyin: "cì", answer: "measure word for actions; time", explanation: "次 (cì) is a measure word for the number of times an action occurs.", funFact: "It can also be used as a suffix to form ordinal numbers, like 第二次 (dì èr cì - the second time)." },
+                        { simplified: "从", pinyin: "cóng", answer: "from", explanation: "从 (cóng) indicates origin or starting point in time or space.", funFact: "It's a common preposition used to introduce the source or beginning of something." },
+                        { simplified: "错", pinyin: "cuò", answer: "wrong; mistaken", explanation: "'不错' (búcuò), literally 'not wrong', is a common way to say something is 'pretty good'.", funFact: "The traditional 錯 is composed of 'metal' (金) and 'ancient' (昔), originally referring to metal inlay work, which evolved to mean 'mistaken'." },
+                        { simplified: "大家", pinyin: "dàjiā", answer: "everyone; everybody", explanation: "大家 (dàjiā) means 'big family', but is used to address or refer to everyone.", funFact: "It implies a sense of community or collective presence." },
+                        { simplified: "到", pinyin: "dào", answer: "to arrive; to reach", explanation: "到 (dào) indicates arrival at a destination or completion of an action.", funFact: "It can also be used as a resultative complement after a verb to show accomplishment." },
+                        { simplified: "得", pinyin: "de", answer: "structural particle (describing extent/manner)", explanation: "得 (de) is a structural particle used after a verb to introduce a complement describing the extent or manner of an action.", funFact: "There are three common 'de' particles in Chinese, each with distinct uses and characters (的, 地, 得)." },
+                        { simplified: "等", pinyin: "děng", answer: "to wait; to await", explanation: "等 (děng) is the verb 'to wait'.", funFact: "In Chinese, it's polite to say '请等一下' (Qǐng děng yīxià - Please wait a moment)." },
+                        { simplified: "弟弟", pinyin: "dìdi", answer: "younger brother", explanation: "弟弟 (dìdi) is the term for a younger brother.", funFact: "In traditional Chinese families, birth order and age are very important, influencing address terms." },
+                        { simplified: "第一", pinyin: "dì-yī", answer: "first; No.1", explanation: "第一 (dì-yī) means 'the first' or 'number one'.", funFact: "第 (dì) is a prefix used to form ordinal numbers." },
+                        { simplified: "懂", pinyin: "dǒng", answer: "to understand", explanation: "懂 (dǒng) means to understand something completely.", funFact: "It's often used in questions like '你懂了吗?' (Nǐ dǒng le ma? - Do you understand?)" },
+                        { simplified: "房间", pinyin: "fángjiān", answer: "room", explanation: "房间 (fángjiān) combines 'house' (房 fáng) and 'between' (间 jiān), literally 'space in a house'.", funFact: "In older Chinese architecture, rooms were often arranged around a central courtyard." },
+                        { simplified: "非常", pinyin: "fēicháng", answer: "very; extremely", funFact: "It implies an exceptional degree of something." },
+                        { simplified: "服务员", pinyin: "fúwùyuán", answer: "waiter; attendant", explanation: "服务员 (fúwùyuán) refers to service staff, like a waiter, sales clerk, or attendant.", funFact: "服务 (fúwù) means 'service' and 员 (yuán) means 'member' or 'personnel'." },
+                        { simplified: "高", pinyin: "gāo", answer: "tall; high", explanation: "高 (gāo) describes height or a high position.", funFact: "It can be used for people, buildings, or abstract concepts like 'high standards'." },
+                        { simplified: "告诉", pinyin: "gàosu", answer: "to tell; to inform", explanation: "告诉 (gàosu) means to tell someone something.", funFact: "It usually takes an indirect object (the person being told) before the direct object (the information)." },
+                        { simplified: "哥哥", pinyin: "gēge", answer: "older brother", explanation: "哥哥 (gēge) is the term for an older brother.", funFact: "It is common to use reduplication (repeating the character) for kinship terms to express affection." },
+                        { simplified: "给", pinyin: "gěi", answer: "to give; to; for", explanation: "给 (gěi) can be a verb 'to give' or a preposition 'to/for'.", funFact: "When used as a preposition, it introduces the recipient of an action." },
+                        { simplified: "贵", pinyin: "guì", answer: "expensive; noble", explanation: "贵 (guì) means expensive or noble.", funFact: "It's often used politely to ask '贵姓?' (Guì xìng? - What is your honorable surname?)." },
+                        { simplified: "过", pinyin: "guò", answer: "particle for past experience; to pass", explanation: "过 (guò) is a versatile particle indicating past experience, or a verb meaning 'to pass'.", funFact: "When used after a verb, it signifies that an action has been experienced at least once, e.g., '我去过中国' (Wǒ qùguo Zhōngguó - I have been to China)." },
+                        { simplified: "还", pinyin: "hái", answer: "still; also; even", explanation: "还 (hái) is an adverb with multiple meanings depending on context, including 'still', 'also', or 'even'.", funFact: "Its versatility makes it a frequently used and sometimes tricky character for learners." },
+                        { simplified: "孩子", pinyin: "háizi", answer: "child", explanation: "孩子 (háizi) is a general term for child.", funFact: "In Chinese culture, children are often seen as the future and bringers of joy to a family." },
+                        { simplified: "好吃", pinyin: "hǎochī", answer: "delicious (for food)", explanation: "好吃 (hǎochī) literally means 'good to eat'.", funFact: "Chinese people often praise food with enthusiasm." },
+                        { simplified: "黑", pinyin: "hēi", answer: "black", explanation: "黑 (hēi) is the color black.", funFact: "Black is often associated with mystery, solemnity, and sometimes bad luck in Chinese culture." },
+                        { simplified: "红", pinyin: "hóng", answer: "red", explanation: "红 (hóng) is the color red.", funFact: "Red is the most auspicious color in Chinese culture, symbolizing good fortune, joy, and prosperity." },
+                        { simplified: "欢迎", pinyin: "huānyíng", answer: "welcome", explanation: "欢迎 (huānyíng) means 'welcome'.", funFact: "It's often accompanied by applause or a warm smile in welcoming ceremonies." },
+                        { simplified: "回答", pinyin: "huídá", answer: "to answer; to reply", explanation: "回答 (huídá) means to answer a question or reply.", funFact: "It's important to differentiate between 回答 (to answer a question) and 回 (huí - to return)." },
+                        { simplified: "鸡蛋", pinyin: "jīdàn", answer: "egg", explanation: "鸡蛋 (jīdàn) combines 'chicken' (鸡 jī) and 'egg' (蛋 dàn).", funFact: "Eggs are a very common ingredient in Chinese cooking, used in various dishes from stir-fries to soups." },
+                        { simplified: "件", pinyin: "jiàn", answer: "measure word for clothes/matters", explanation: "件 (jiàn) is a measure word for items of clothing, matters, or events.", funFact: "It helps classify nouns into countable units." },
+                        { simplified: "教室", pinyin: "jiàoshì", answer: "classroom", explanation: "教室 (jiàoshì) combines 'teach' (教 jiāo) and 'room' (室 shì).", funFact: "Chinese classrooms often have blackboards or whiteboards and sometimes display motivational slogans." },
+                        { simplified: "姐姐", pinyin: "jiějie", answer: "older sister", explanation: "姐姐 (jiějie) is the term for an older sister.", funFact: "Showing respect to elders, including older siblings, is a core value in Chinese culture." },
+                        { simplified: "介绍", pinyin: "jièshào", answer: "to introduce", explanation: "介绍 (jièshào) means to introduce (a person or topic).", funFact: "When introducing people, it's polite to start with the most senior or respected person." },
+                        { simplified: "进", pinyin: "jìn", answer: "to enter; to come in", explanation: "进 (jìn) indicates movement into a place.", funFact: "It's the opposite of 出 (chū - to go out)." },
+                        { simplified: "近", pinyin: "jìn", answer: "near; close", explanation: "近 (jìn) describes proximity.", funFact: "It can be used for physical distance or time (最近 zuìjìn - recently)." },
+                        { simplified: "就", pinyin: "jiù", answer: "then; exactly; precisely", explanation: "就 (jiù) is an adverb with many uses, often implying 'then', 'exactly', or 'as early as'.", funFact: "Its meaning heavily depends on context and other words in the sentence." },
+                        { simplified: "觉得", pinyin: "juéde", answer: "to feel; to think", explanation: "觉得 (juéde) expresses a personal feeling or opinion.", funFact: "It's often used when giving subjective statements, e.g., '我觉得很好' (Wǒ juéde hěn hǎo - I feel it's very good)." },
+                        { simplified: "开始", pinyin: "kāishǐ", answer: "to start; to begin", explanation: "开始 (kāishǐ) means to start or begin an activity or process.", funFact: "It can be used for events, actions, or periods of time." },
+                        { simplified: "考试", pinyin: "kǎoshì", answer: "exam; to take an exam", explanation: "考试 (kǎoshì) can be both a noun (exam) and a verb phrase (to take an exam).", funFact: "Exams play a significant role in Chinese education and career progression, notably the Gaokao (高考), the national college entrance exam." },
+                        { simplified: "可能", pinyin: "kěnéng", answer: "maybe; possible", explanation: "可能 (kěnéng) indicates possibility or likelihood.", funFact: "It can function as an adverb or an adjective." },
+                        { simplified: "可以", pinyin: "kěyǐ", answer: "can; may; permissible", explanation: "可以 (kěyǐ) indicates permission or possibility.", funFact: "It's often used when asking for or granting permission, distinguishing it from 能 (néng) for capability." },
+                        { simplified: "课", pinyin: "kè", answer: "class; lesson", explanation: "课 (kè) refers to a class or a lesson.", funFact: "Chinese students often have many subjects and classes throughout their school day." },
+                        { simplified: "快", pinyin: "kuài", answer: "fast; quick; soon", explanation: "快 (kuài) describes speed or indicates that something will happen soon.", funFact: "It's the opposite of 慢 (màn - slow)." },
+                        { simplified: "快乐", pinyin: "kuàilè", answer: "happy; joyful", explanation: "快乐 (kuàilè) is used to describe happiness, especially in a joyful or cheerful sense.", funFact: "It's commonly used in greetings like '生日快乐' (shēngrì kuàilè - Happy Birthday)." },
+                        { simplified: "累", pinyin: "lèi", answer: "tired", explanation: "累 (lèi) describes a state of fatigue.", funFact: "It's common to express tiredness after a long day of work or study." },
+                        { simplified: "离", pinyin: "lí", answer: "away from; to be away from", explanation: "离 (lí) is a preposition indicating distance or separation from a place.", funFact: "It's crucial for describing spatial relationships, e.g., '我家离学校很近' (Wǒ jiā lí xuéxiào hěn jìn - My home is very close to school)." },
+                        { simplified: "两", pinyin: "liǎng", answer: "two (before measure words)", explanation: "两 (liǎng) is used before measure words to mean 'two', while 二 (èr) is used in counting or in numbers.", funFact: "This is a common point of confusion for beginners, but mastering it makes your Chinese sound more natural." },
+                        { simplified: "路", pinyin: "lù", answer: "road; path; route", explanation: "路 (lù) refers to a road, path, or a route.", funFact: "It's part of many common place names and directions." },
+                        { simplified: "旅游", pinyin: "lǚyóu", answer: "to travel; tourism", explanation: "旅游 (lǚyóu) means to travel or tourism.", funFact: "Domestic tourism is very popular in China, with many beautiful scenic spots." },
+                        { simplified: "卖", pinyin: "mài", answer: "to sell", explanation: "卖 (mài) is the verb 'to sell'.", funFact: "It's the opposite of 买 (mǎi - to buy)." },
+                        { simplified: "慢", pinyin: "màn", answer: "slow", explanation: "慢 (màn) describes slowness.", funFact: "It's often used in polite requests like '请说慢一点' (Qǐng shuō màn yīdiǎn - Please speak a bit slower)." },
+                        { simplified: "忙", pinyin: "máng", answer: "busy", explanation: "忙 (máng) describes being busy.", funFact: "It's a common greeting to ask '你忙吗?' (Nǐ máng ma? - Are you busy?), often simply as a polite opening." },
+                        { simplified: "每", pinyin: "měi", answer: "every; each", explanation: "每 (měi) means 'every' or 'each'.", funFact: "It's always followed by a measure word and then a noun, e.g., 每天 (měitiān - every day)." },
+                        { simplified: "妹妹", pinyin: "mèimei", answer: "younger sister", explanation: "妹妹 (mèimei) is the term for a younger sister.", funFact: "Sibling relationships are highly valued in Chinese families." },
+                        { simplified: "门", pinyin: "mén", answer: "door; gate", explanation: "门 (mén) refers to a door or a gate.", funFact: "It can also be a measure word for subjects of study or skills, e.g., 一门语言 (yī mén yǔyán - a language)." },
+                        { simplified: "旁边", pinyin: "pángbiān", answer: "beside; next to", explanation: "旁边 (pángbiān) means beside or next to.", funFact: "It combines 旁 (páng - side) and 边 (biān - side/edge)." },
+                        { simplified: "跑步", pinyin: "pǎobù", answer: "to run; to jog", explanation: "跑步 (pǎobù) combines 'to run' (跑 pǎo) and 'step' (步 bù).", funFact: "Running and jogging are very popular forms of exercise in China, especially in city parks." },
+                        { simplified: "便宜", pinyin: "piányi", answer: "cheap; inexpensive", explanation: "便宜 (piányi) describes something that is cheap.", funFact: "It's the opposite of 贵 (guì - expensive)." },
+                        { simplified: "票", pinyin: "piào", answer: "ticket", explanation: "票 (piào) refers to a ticket for transport, events, or other services.", funFact: "With modern technology, mobile e-tickets are now very common in China." },
+                        { simplified: "起床", pinyin: "qǐchuáng", answer: "to get up (from bed)", explanation: "起床 (qǐchuáng) means to get up from bed.", funFact: "It combines 'to rise' (起 qǐ) and 'bed' (床 chuáng)." },
+                        { simplified: "晴", pinyin: "qíng", answer: "sunny; clear (weather)", explanation: "晴 (qíng) describes sunny or clear weather.", funFact: "It's often used in weather forecasts." },
+                        { simplified: "让", pinyin: "ràng", answer: "to let; to allow; to make", explanation: "让 (ràng) is a versatile verb meaning 'to let', 'to allow', or 'to make' someone do something.", funFact: "It can also be used in passive voice constructions." },
+                        { simplified: "上班", pinyin: "shàngbān", answer: "to go to work; to start work", explanation: "上班 (shàngbān) means to go to work or start a shift.", funFact: "Many Chinese companies have strict work hours and punctuality is highly valued." },
+                        { simplified: "身体", pinyin: "shēntǐ", answer: "body; health", explanation: "身体 (shēntǐ) refers to one's body or health.", funFact: "It's common to ask about someone's health using '身体好吗?' (Shēntǐ hǎo ma? - How is your health?)." },
+                        { simplified: "生病", pinyin: "shēngbìng", answer: "to get sick; to fall ill", explanation: "生病 (shēngbìng) means to get sick.", funFact: "It literally means 'to produce illness'." },
+                        { simplified: "生日", pinyin: "shēngrì", answer: "birthday", explanation: "生日 (shēngrì) means birthday.", funFact: "Chinese birthdays traditionally emphasize longevity, with specific foods like longevity noodles (长寿面 chángshòu miàn) being eaten." },
+                        { simplified: "事情", pinyin: "shìqing", answer: "matter; affair; thing", explanation: "事情 (shìqing) refers to a matter, affair, or a general thing.", funFact: "It often refers to something that needs to be done or dealt with." },
+                        { simplified: "手表", pinyin: "shǒubiǎo", answer: "watch", explanation: "手表 (shǒubiǎo) literally 'hand meter'.", funFact: "In Chinese culture, gifting clocks or watches can sometimes be taboo as '送钟' (sòng zhōng) sounds like '送终' (sòng zhōng - to attend a funeral)." },
+                        { simplified: "手机", pinyin: "shǒujī", answer: "mobile phone", explanation: "手机 (shǒujī) literally 'hand machine'.", funFact: "Mobile payments (like WeChat Pay and Alipay) are extremely prevalent in China, almost replacing cash." },
+                        { simplified: "送", pinyin: "sòng", answer: "to give (as a gift); to send; to see off", explanation: "送 (sòng) is a versatile verb meaning to give (a gift), to send, or to see someone off.", funFact: "It's common to give small gifts when visiting someone's home." },
+                        { simplified: "踢足球", pinyin: "tī zúqiú", answer: "to play soccer/football", explanation: "踢足球 (tī zúqiú) means 'to kick football'. 踢 (tī) is to kick.", funFact: "Football is a popular sport in China, with many enthusiastic fans." },
+                        { simplified: "题", pinyin: "tí", answer: "question; problem; topic", explanation: "题 (tí) refers to a question, problem, or topic, especially in exams or discussions.", funFact: "It's a common character in educational contexts." },
+                        { simplified: "跳舞", pinyin: "tiàowǔ", answer: "to dance", explanation: "跳舞 (tiàowǔ) combines 'to jump' (跳 tiào) and 'dance' (舞 wǔ).", funFact: "Public square dancing (广场舞 guǎngchǎngwǔ) is a widespread and popular activity among middle-aged and elderly women in China." },
+                        { simplified: "外", pinyin: "wài", answer: "outside; outer", explanation: "外 (wài) indicates outside or external.", funFact: "It's the opposite of 里 (lǐ - inside)." },
+                        { simplified: "完", pinyin: "wán", answer: "to finish; to be over", explanation: "完 (wán) is a resultative complement indicating completion of an action.", funFact: "It can be used after a verb to show that the action is finished, e.g., '吃完了' (chī wán le - finished eating)." }
+                    ],
+                    hsk3: [
+                        { simplified: "阿姨", pinyin: "āyí", answer: "aunt", explanation: "阿姨 (āyí) is a respectful term for a woman of one's mother's generation, or a younger woman (like a nanny or saleslady).", funFact: "It's a versatile term of address used for older unrelated women as a sign of respect." },
+                        { simplified: "啊", pinyin: "a", answer: "ah (interjection); final particle", explanation: "啊 (a) is a common interjection expressing surprise, admiration, or a final particle softening a tone.", funFact: "Its pronunciation can change depending on the preceding sound, often blending for smoother speech." },
+                        { simplified: "矮", pinyin: "ǎi", answer: "short (in height)", explanation: "矮 (ǎi) describes a person's or object's height as short.", funFact: "It's the opposite of 高 (gāo - tall/high)." },
+                        { simplified: "安静", pinyin: "ānjìng", answer: "quiet; peaceful", explanation: "安静 (ānjìng) describes a quiet or peaceful environment or state.", funFact: "It can be used as both an adjective and a verb (to quiet down)." },
+                        { simplified: "把", pinyin: "bǎ", answer: "disposal particle; to hold", explanation: "把 (bǎ) is a pivotal particle used to move the object of a verb before the verb, emphasizing its disposal or handling.", funFact: "This 'ba' construction is fundamental for expressing direct object manipulation." },
+                        { simplified: "班", pinyin: "bān", answer: "class; team; shift", explanation: "班 (bān) can refer to a class (of students), a team, or a work shift.", funFact: "It's also a measure word for regular flights or train services." },
+                        { simplified: "搬", pinyin: "bān", answer: "to move (house, heavy object)", explanation: "搬 (bān) means to move something heavy or to move house.", funFact: "It implies physically transporting something or relocating oneself." },
+                        { simplified: "办法", pinyin: "bànfǎ", answer: "method; way; solution", explanation: "办法 (bànfǎ) refers to a method, a way of doing something, or a solution to a problem.", funFact: "It's common to ask '有什么办法吗?' (Yǒu shénme bànfǎ ma? - Is there any way/solution?)" },
+                        { simplified: "办公室", pinyin: "bàngōngshì", answer: "office", explanation: "办公室 (bàngōngshì) combines 'handle' (办 bàn), 'public/official' (公 gōng), and 'room' (室 shì).", funFact: "It literally means 'a room for handling public affairs'." },
+                        { simplified: "半", pinyin: "bàn", answer: "half", explanation: "半 (bàn) means half.", funFact: "It's often used with quantities, like '一半' (yībàn - one half) or '半小时' (bàn xiǎoshí - half an hour)." },
+                        { simplified: "包", pinyin: "bāo", answer: "bag; to wrap", explanation: "包 (bāo) can mean a bag (noun) or to wrap (verb).", funFact: "It's a versatile character used in many compounds related to containers or packaging." },
+                        { simplified: "饱", pinyin: "bǎo", answer: "full (from eating)", explanation: "饱 (bǎo) describes the feeling of being full after eating.", funFact: "It's common to say '我吃饱了' (Wǒ chībǎo le) after a meal, meaning 'I'm full'." },
+                        { simplified: "北方", pinyin: "běifāng", answer: "north; northern part", explanation: "北方 (běifāng) refers to the north or the northern part of a region.", funFact: "Northern China often has colder winters and a cuisine featuring more wheat-based foods like noodles and dumplings." },
+                        { simplified: "被", pinyin: "bèi", answer: "by (passive voice)", explanation: "被 (bèi) is a passive voice marker, indicating that the subject is acted upon.", funFact: "The 'bei' construction is one of the primary ways to form passive sentences in Chinese." },
+                        { simplified: "鼻子", pinyin: "bízi", answer: "nose", explanation: "鼻子 (bízi) is the word for nose.", funFact: "The Chinese zodiac has a 'nose' as one of the facial features used to determine personality." },
+                        { simplified: "比赛", pinyin: "bǐsài", answer: "competition; match; to compete", explanation: "比赛 (bǐsài) can be a noun (competition) or a verb (to compete).", funFact: "Many competitive sports and games are popular in China, from ping-pong to e-sports." },
+                        { simplified: "必须", pinyin: "bìxū", answer: "must; have to", explanation: "必须 (bìxū) expresses a strong necessity or obligation, meaning 'must' or 'have to'.", funFact: "It conveys a stronger sense of requirement than 应该 (yīnggāi - should)." },
+                        { simplified: "变化", pinyin: "biànhuà", answer: "change; to change", explanation: "变化 (biànhuà) can be both a noun (change) and a verb (to change).", funFact: "China has undergone tremendous economic and social changes in recent decades." },
+                        { simplified: "表示", pinyin: "biǎoshì", answer: "to express; to show; to indicate", explanation: "表示 (biǎoshì) means to express, show, or indicate a feeling, idea, or intention.", funFact: "It's used for both verbal and non-verbal expressions." },
+                        { simplified: "表演", pinyin: "biǎoyǎn", answer: "performance; to perform", explanation: "表演 (biǎoyǎn) can be a noun (performance) or a verb (to perform).", funFact: "Traditional Chinese performing arts include opera, acrobatics, and shadow puppetry." },
+                        { simplified: "别人", pinyin: "biéren", answer: "other people", explanation: "别人 (biéren) means 'other people' or 'someone else'.", funFact: "The character 别 (bié) can also mean 'don't' or 'to distinguish'." },
+                        { simplified: "宾馆", pinyin: "bīnguǎn", answer: "hotel", explanation: "宾馆 (bīnguǎn) is a common term for hotel, often used for guesthouses or medium-sized hotels.", funFact: "旅馆 (lǚguǎn) is another term for hotel, often smaller or more budget-friendly." },
+                        { simplified: "冰箱", pinyin: "bīngxiāng", answer: "refrigerator", explanation: "冰箱 (bīngxiāng) literally means 'ice box'.", funFact: "Modern appliances are common in Chinese homes, even in rural areas." },
+                        { simplified: "才", pinyin: "cái", answer: "not until; only then", explanation: "才 (cái) is an adverb indicating that an action happens later than expected or is achieved with difficulty.", funFact: "It often implies a sense of 'only' or 'just' in terms of time or condition." },
+                        { simplified: "草", pinyin: "cǎo", answer: "grass", explanation: "草 (cǎo) is the general term for grass or straw.", funFact: "The radical for 'grass' (艹) is commonly found at the top of characters related to plants." },
+                        { simplified: "层", pinyin: "céng", answer: "floor; layer", explanation: "层 (céng) is a measure word for floors of a building or layers of something.", funFact: "When referring to floors, '第一层' (dì yī céng) is the first floor, which is the ground floor in China (unlike the US)." },
+                        { simplified: "差", pinyin: "chà", answer: "bad; poor; lack", explanation: "差 (chà) can mean bad, poor (in quality), or lacking something.", funFact: "It can also be pronounced chā when it means 'difference' or 'to differ'." },
+                        { simplified: "超市", pinyin: "chāoshì", answer: "supermarket", explanation: "超市 (chāoshì) is an abbreviation of 超级市场 (chāojí shìchǎng), meaning 'super market'.", funFact: "Supermarkets are increasingly popular in urban areas, though traditional wet markets still thrive." },
+                        { simplified: "成绩", pinyin: "chéngjì", answer: "grade; score; achievement", explanation: "成绩 (chéngjì) refers to academic grades, sports scores, or general achievements.", funFact: "Academic success is highly valued in Chinese society, and grades are often a source of family pride." },
+                        { simplified: "迟到", pinyin: "chídào", answer: "to be late", explanation: "迟到 (chídào) means to be late or arrive late.", funFact: "Punctuality is generally expected in formal settings in China." },
+                        { simplified: "出现", pinyin: "chūxiàn", answer: "to appear; to emerge", explanation: "出现 (chūxiàn) means to appear or emerge, often implying something new or unexpected.", funFact: "It can be used for people, events, or phenomena." },
+                        { simplified: "厨房", pinyin: "chúfáng", answer: "kitchen", explanation: "厨房 (chúfáng) is the room where food is prepared.", funFact: "In Chinese homes, the kitchen is often a vibrant hub of activity due to the importance of home-cooked meals." },
+                        { simplified: "除了", pinyin: "chúle", answer: "besides; except; in addition to", explanation: "除了 (chúle) introduces an exception or an additional item, meaning 'besides', 'except for', or 'in addition to'.", funFact: "Its specific meaning depends on whether it's followed by 还 (hái) or 都 (dōu)." },
+                        { simplified: "春", pinyin: "chūn", answer: "spring", explanation: "春 (chūn) is the season of spring.", funFact: "Spring Festival (春节 Chūnjié) is the most important holiday, marking the start of spring and the new lunar year." },
+                        { simplified: "词语", pinyin: "cíyǔ", answer: "word; expression", explanation: "词语 (cíyǔ) refers to a word or an expression, often a fixed phrase.", funFact: "Learning vocabulary is a key part of mastering Chinese, especially with its vast number of compound words." },
+                        { simplified: "聪明", pinyin: "cōngming", answer: "clever; smart", explanation: "聪明 (cōngming) describes someone as clever or smart.", funFact: "It's a common compliment for children and adults alike." },
+                        { simplified: "打扫", pinyin: "dǎsǎo", answer: "to clean; to sweep", explanation: "打扫 (dǎsǎo) means to clean or sweep.", funFact: "It often implies a thorough cleaning, such as tidying a room." },
+                        { simplified: "打算", pinyin: "dǎsuàn", answer: "to plan; to intend; plan", explanation: "打算 (dǎsuàn) can be a verb 'to plan' or a noun 'plan'.", funFact: "It's used for both short-term intentions and long-term plans." },
+                        { simplified: "带", pinyin: "dài", answer: "to bring; to take; to carry", explanation: "带 (dài) means to bring, take, or carry something or someone with you.", funFact: "It's often used for accompanying someone or carrying an item." },
+                        { simplified: "担心", pinyin: "dānxīn", answer: "to worry; to be anxious", explanation: "担心 (dānxīn) means to worry or to be anxious.", funFact: "The character 担 (dān) means 'to carry (on a shoulder)', suggesting carrying a burden in your heart." },
+                        { simplified: "蛋糕", pinyin: "dàngāo", answer: "cake", explanation: "蛋糕 (dàngāo) literally 'egg cake'.", funFact: "While traditional Chinese desserts differ, Western-style cakes have become very popular for celebrations." },
+                        { simplified: "当然", pinyin: "dāngrán", answer: "of course; certainly", explanation: "当然 (dāngrán) means 'of course' or 'certainly', expressing certainty or agreement.", funFact: "It implies that something is self-evident or expected." },
+                        { simplified: "地", pinyin: "de", answer: "particle for adverbs", explanation: "地 (de) is a structural particle used after an adjective or adverb to modify a verb, forming an adverbial phrase.", funFact: "It connects the manner of an action to the action itself (e.g., 慢慢地走 - walk slowly)." },
+                        { simplified: "灯", pinyin: "dēng", "answer": "light; lamp", explanation: "灯 (dēng) refers to a light or lamp.", funFact: "Lanterns are a significant part of traditional Chinese festivals, symbolizing happiness and good fortune." },
+                        { simplified: "地方", pinyin: "dìfang", answer: "place; locality", explanation: "地方 (dìfang) means a place or locality.", funFact: "It's a very general term that can refer to any location." },
+                        { simplified: "地铁", pinyin: "dìtiě", answer: "subway; metro", explanation: "地铁 (dìtiě) literally 'ground iron', referring to underground railways.", funFact: "Many major Chinese cities have extensive and modern subway systems." },
+                        { simplified: "地图", pinyin: "dìtú", answer: "map", explanation: "地图 (dìtú) combines 'ground' (地 dì) and 'drawing/picture' (图 tú).", funFact: "Digital maps and navigation apps are widely used in China." },
+                        { simplified: "电梯", pinyin: "diàntī", answer: "elevator; escalator", explanation: "电梯 (diàntī) refers to both elevators and escalators.", funFact: "The character 梯 (tī) means 'ladder' or 'stairs'." },
+                        { simplified: "东", pinyin: "dōng", answer: "east", explanation: "东 (dōng) is the cardinal direction east.", funFact: "It's often paired with other directions, like 东西 (dōngxi - east west / thing)." },
+                        { simplified: "冬", pinyin: "dōng", answer: "winter", explanation: "冬 (dōng) is the season of winter.", funFact: "Northern China experiences harsh winters with snow and ice, while southern regions are milder." },
+                        { simplified: "动物", pinyin: "dòngwù", answer: "animal", explanation: "动物 (dòngwù) combines 'move' (动 dòng) and 'thing' (物 wù), literally 'moving thing'.", funFact: "China has diverse wildlife, including its famous pandas." },
+                        { simplified: "短", pinyin: "duǎn", answer: "short (in length)", explanation: "短 (duǎn) describes short length.", funFact: "It's the opposite of 长 (cháng - long)." },
+                        { simplified: "段", pinyin: "duàn", answer: "section; segment; paragraph", explanation: "段 (duàn) is a measure word for sections, segments, or paragraphs.", funFact: "It's used to divide longer pieces into manageable parts, such as '一段话' (yī duàn huà - a paragraph of speech)." },
+                        { simplified: "锻炼", pinyin: "duànliàn", answer: "to exercise; to do physical training", explanation: "锻炼 (duànliàn) means to exercise or do physical training.", funFact: "It can also imply training or tempering one's will or character." },
+                        { simplified: "多么", pinyin: "duōme", answer: "how (adv. of degree)", explanation: "多么 (duōme) is an adverb used to express a high degree, similar to 'how...!' or 'what a...!'.", funFact: "It's often used in exclamatory sentences." },
+                        { simplified: "饿", pinyin: "è", answer: "hungry", explanation: "饿 (è) describes the state of being hungry.", funFact: "It's common to ask '你饿了吗?' (Nǐ è le ma? - Are you hungry?)" },
+                        { simplified: "耳朵", pinyin: "ěrduo", answer: "ear", explanation: "耳朵 (ěrduo) is the word for ear.", funFact: "The character ěr (耳) is often used as a radical in characters related to hearing or the ear." },
+                        { simplified: "发", pinyin: "fā", answer: "to send; to issue; to emit", explanation: "发 (fā) is a versatile verb meaning to send, issue, or emit.", funFact: "It's part of many common phrases like 发短信 (fā duǎnxìn - send a text message) or 发现 (fāxiàn - discover)." },
+                        { simplified: "发烧", pinyin: "fāshāo", answer: "to have a fever", explanation: "发烧 (fāshāo) means to have a fever.", funFact: "It combines 'to send out' (发 fā) and 'to burn' (烧 shāo), literally 'to send out burning sensation'." },
+                        { simplified: "发现", pinyin: "fāxiàn", answer: "to discover; to find", explanation: "发现 (fāxiàn) means to discover or find something.", funFact: "It implies uncovering something previously unknown." },
+                        { simplified: "方便", pinyin: "fāngbiàn", answer: "convenient", explanation: "方便 (fāngbiàn) describes something as convenient.", funFact: "It's frequently used in daily life to ask about convenience or offer help." },
+                        { simplified: "放", pinyin: "fàng", answer: "to put; to place; to release", explanation: "放 (fàng) means to put, place, or release.", funFact: "It's also used in phrases like 放假 (fàngjià - to have a holiday)." },
+                        { simplified: "放心", pinyin: "fàngxīn", answer: "to set one's mind at rest; to be at ease", explanation: "放心 (fàngxīn) means to set one's mind at rest or to be at ease.", funFact: "It literally means 'release heart'." },
+                        { simplified: "分", pinyin: "fēn", answer: "minute; point; to divide", explanation: "分 (fēn) can be a unit of time (minute), a score (point), or a verb (to divide).", funFact: "Its meaning is highly dependent on context." },
+                        { simplified: "附近", pinyin: "fùjìn", answer: "nearby; vicinity", explanation: "附近 (fùjìn) means nearby or in the vicinity.", funFact: "It's useful for asking about locations close to you." },
+                        { simplified: "复习", pinyin: "fùxí", answer: "to review", explanation: "复习 (fùxí) means to review study material.", funFact: "It's an essential part of effective learning and exam preparation." },
+                        { simplified: "干净", pinyin: "gānjìng", answer: "clean", explanation: "干净 (gānjìng) describes something as clean.", funFact: "The character 干 (gān) means 'dry', and 净 (jìng) means 'clean', implying 'dry and clean'." },
+                        { simplified: "敢", pinyin: "gǎn", answer: "to dare; to venture", explanation: "敢 (gǎn) means to dare or to venture to do something.", funFact: "It implies courage or boldness." },
+                        { simplified: "感冒", pinyin: "gǎnmào", answer: "to catch a cold; common cold", explanation: "感冒 (gǎnmào) can be a verb (to catch a cold) or a noun (common cold).", funFact: "Traditional Chinese medicine often emphasizes prevention of colds through diet and lifestyle." },
+                        { simplified: "刚才", pinyin: "gāngcái", answer: "just now; a moment ago", explanation: "刚才 (gāngcái) refers to a very recent past moment.", funFact: "It emphasizes the immediacy of the past action." },
+                        { simplified: "跟", pinyin: "gēn", answer: "with; to follow", explanation: "跟 (gēn) can mean 'with' (preposition) or 'to follow' (verb).", funFact: "It's commonly used to express accompaniment or a sequential relationship." },
+                        { simplified: "根据", pinyin: "gēnjù", answer: "according to; basis", explanation: "根据 (gēnjù) means 'according to' (preposition) or 'basis' (noun).", funFact: "It's used to introduce the source or basis of information." },
+                        { simplified: "更", pinyin: "gèng", answer: "more; even more", explanation: "更 (gèng) indicates a higher degree, meaning 'more' or 'even more'.", funFact: "It's used to make comparative statements, e.g., '更好' (gèng hǎo - even better)." }
+                    ],
+                    hsk4: [
+                        { simplified: "爱情", pinyin: "àiqíng", answer: "love (between partners)", explanation: "爱情 (àiqíng) specifically refers to romantic love or affection between partners.", funFact: "The characters 爱 (ài - love) and 情 (qíng - feeling/emotion) combine to form this specific type of love." },
+                        { simplified: "安排", pinyin: "ānpái", answer: "to arrange; arrangement", explanation: "安排 (ānpái) can be a verb meaning 'to arrange' or a noun meaning 'arrangement'.", funFact: "It's often used in planning schedules, events, or tasks." },
+                        { simplified: "安全", pinyin: "ānquán", answer: "safe; safety", explanation: "安全 (ānquán) means safe (adjective) or safety (noun).", funFact: "It's a crucial concept in daily life, from food safety to personal safety." },
+                        { simplified: "按时", pinyin: "ànshí", answer: "on time; punctually", explanation: "按时 (ànshí) means to do something on time or punctually.", funFact: "Punctuality is generally highly regarded in Chinese business and social etiquette." },
+                        { simplified: "按照", pinyin: "ànzhào", answer: "according to; in accordance with", explanation: "按照 (ànzhào) means 'according to' or 'in accordance with', often used for rules, plans, or instructions.", funFact: "It implies adherence to a specified standard or method." },
+                        { simplified: "百分之", pinyin: "bǎifēnzhī", answer: "percent", explanation: "百分之 (bǎifēnzhī) literally means 'percent of'. For example, 百分之八十 (bǎifēnzhī bāshí) means 80%.", funFact: "The structure is 'percent + number' in Chinese, unlike 'number + percent' in English." },
+                        { simplified: "棒", pinyin: "bàng", answer: "great; wonderful", explanation: "棒 (bàng) is an informal and enthusiastic way to say something is great or wonderful.", funFact: "It literally means 'stick' or 'rod', but in this context, it's slang for excellent." },
+                        { simplified: "包子", pinyin: "bāozi", answer: "steamed stuffed bun", explanation: "包子 (bāozi) are a staple breakfast and snack in China, with various fillings.", funFact: "The word 包 (bāo) means both 'to wrap' and 'package', which perfectly describes a steamed bun with filling." },
+                        { simplified: "保护", pinyin: "bǎohù", answer: "to protect", explanation: "保护 (bǎohù) means to protect, preserve, or safeguard.", funFact: "Environmental protection is a growing concern in China, leading to various initiatives." },
+                        { simplified: "保证", pinyin: "bǎozhèng", answer: "to guarantee; to assure", explanation: "保证 (bǎozhèng) means to guarantee, assure, or pledge.", funFact: "It can be used to make promises or provide assurance of quality." },
+                        { simplified: "报名", pinyin: "bàomíng", answer: "to sign up; to register", explanation: "报名 (bàomíng) means to sign up or register for an event, course, or activity.", funFact: "It literally means 'report name'." },
+                        { simplified: "抱", pinyin: "bào", answer: "to hug; to hold", explanation: "抱 (bào) means to hug or to hold (in one's arms).", funFact: "Hugging is less common as a public greeting in China than in some Western cultures, but common among close friends and family." },
+                        { simplified: "抱歉", pinyin: "bàoqiàn", answer: "sorry; apologetic", explanation: "抱歉 (bàoqiàn) is a more formal and stronger expression of apology than 对不起 (duìbuqǐ).", funFact: "It conveys a sense of regret or being sorry for causing inconvenience." },
+                        { simplified: "倍", pinyin: "bèi", answer: "times (multiplier); -fold", explanation: "倍 (bèi) indicates a multiple or '-fold'. For example, 两倍 (liǎng bèi) means two times/double.", funFact: "It's used to express proportional increase." },
+                        { simplified: "本来", pinyin: "běnlái", answer: "originally; at first", explanation: "本来 (běnlái) means originally or at first, often implying a change from an initial state.", funFact: "It's useful for explaining how things were before a change occurred." },
+                        { simplified: "笨", pinyin: "bèn", answer: "stupid; clumsy", explanation: "笨 (bèn) means stupid or clumsy.", funFact: "It's the opposite of 聪明 (cōngming - clever)." },
+                        { simplified: "比如", pinyin: "bǐrú", answer: "for example; for instance", explanation: "比如 (bǐrú) is used to introduce examples, meaning 'for example' or 'for instance'.", funFact: "It's often used to illustrate examples, making expression clearer." },
+                        { simplified: "笔记本", pinyin: "bǐjìběn", answer: "notebook", explanation: "笔记本 (bǐjìběn) can refer to both a paper notebook and a laptop computer.", funFact: "The characters literally mean 'pen' (笔) 'record' (记) 'book' (本), highlighting its function for writing notes." },
+                        { simplified: "毕业", pinyin: "bìyè", answer: "to graduate; graduation", explanation: "毕业 (bìyè) means to graduate or graduation.", funFact: "Graduation ceremonies are important milestones in Chinese education, often celebrated with family and friends." },
+                        { simplified: "遍", pinyin: "biàn", answer: "measure word for actions (from start to finish)", explanation: "遍 (biàn) is a measure word for actions, indicating the completion of an action from beginning to end.", funFact: "It emphasizes the entirety of the action, unlike 次 (cì) which just counts occurrences." },
+                        { simplified: "标准", pinyin: "biāozhǔn", answer: "standard; criterion", explanation: "标准 (biāozhǔn) refers to a standard or criterion.", funFact: "It can be used as a noun or an adjective, indicating conformity to a norm." },
+                        { simplified: "表格", pinyin: "biǎogé", answer: "form; table; chart", explanation: "表格 (biǎogé) means a form, table, or chart (for data).", funFact: "Filling out forms is a common administrative task in various contexts." },
+                        { simplified: "表扬", pinyin: "biǎoyáng", answer: "to praise; to commend", explanation: "表扬 (biǎoyáng) means to praise or commend someone.", funFact: "It's a common way to acknowledge good work or behavior, especially for children or students." },
+                        { simplified: "饼干", pinyin: "bǐnggān", answer: "biscuit; cookie", explanation: "饼干 (bǐnggān) is the general term for biscuits or cookies.", funFact: "Biscuits are popular snacks, often served with tea or coffee." },
+                        { simplified: "并且", pinyin: "bìngqiě", answer: "and; moreover; furthermore", explanation: "并且 (bìngqiě) connects clauses or sentences, meaning 'and', 'moreover', or 'furthermore'.", funFact: "It adds emphasis to the second part of the statement, indicating a deeper connection or additional point." },
+                        { simplified: "博士", pinyin: "bóshì", answer: "PhD; doctorate", explanation: "博士 (bóshì) refers to a PhD degree or a doctor (academic title).", funFact: "Earning a doctorate is highly respected in China, signifying advanced academic achievement." },
+                        { simplified: "不过", pinyin: "búguò", answer: "but; however", explanation: "不过 (búguò) means 'but' or 'however', often used to introduce a slight turn or qualification.", funFact: "It's a less formal way to say 'but' compared to 但是 (dànshì)." },
+                        { simplified: "不得不", pinyin: "bùdébù", answer: "have to; cannot but", explanation: "不得不 (bùdébù) means 'have to' or 'cannot but', indicating a strong compulsion or necessity.", funFact: "It suggests that there is no other option but to do something." },
+                        { simplified: "不管", pinyin: "bùguǎn", answer: "no matter (what/how/etc.)", explanation: "不管 (bùguǎn) means 'no matter what/how/etc.', expressing indifference to conditions.", funFact: "It's often followed by a question word (e.g., 不管谁 - no matter who) or an A-not-A question." },
+                        { simplified: "不好意思", pinyin: "bùhǎoyìsi", answer: "sorry for the inconvenience; embarrassed", explanation: "不好意思 (bùhǎoyìsi) expresses a mild apology for inconvenience or embarrassment.", funFact: "It's very commonly used in daily interactions, softening requests or reactions." },
+                        { simplified: "不仅", pinyin: "bùjǐn", answer: "not only", explanation: "不仅 (bùjǐn) means 'not only', often followed by 还 (hái) or 也 (yě) in the second clause.", funFact: "It introduces a progressive relationship, emphasizing that something is true beyond the initial point." },
+                        { simplified: "部分", pinyin: "bùfen", answer: "part; section", explanation: "部分 (bùfen) refers to a part or section of a whole.", funFact: "It can be used for physical parts or abstract sections, like a part of a report." },
+                        { simplified: "擦", pinyin: "cā", answer: "to rub; to wipe; to polish", explanation: "擦 (cā) means to rub, wipe, or polish.", funFact: "It's commonly used for cleaning surfaces or wiping away sweat/tears." },
+                        { simplified: "猜", pinyin: "cāi", answer: "to guess", explanation: "猜 (cāi) means to guess or to conjecture.", funFact: "It's often used in games or when trying to figure something out." },
+                        { simplified: "材料", pinyin: "cáiliào", answer: "material; data; ingredient", explanation: "材料 (cáiliào) means material (for building, art, etc.), data, or ingredients (for cooking).", funFact: "It's a broad term that can refer to raw components for various purposes." },
+                        { simplified: "参观", pinyin: "cānguān", answer: "to visit (a place); to tour", explanation: "参观 (cānguān) means to visit a place (like a museum, factory, or tourist attraction) or to tour.", funFact: "It implies observing something, often for educational or sightseeing purposes." },
+                        { simplified: "差不多", pinyin: "chàbuduō", answer: "almost; nearly; similar", funFact: "It implies that things are close enough or acceptable, even if not perfect." },
+                        { simplified: "尝", pinyin: "cháng", answer: "to taste; to try (food)", explanation: "尝 (cháng) means to taste or to try (food).", funFact: "It's common to invite guests to 尝尝 (chángchang) food as a sign of hospitality." },
+                        { simplified: "乘坐", pinyin: "chéngzuò", answer: "to ride (in a vehicle); to take (transport)", explanation: "乘坐 (chéngzuò) means to ride in a vehicle or to take public transport.", funFact: "It's a formal way to say 'to take' transport, often seen on tickets or announcements." },
+                        { simplified: "成功", pinyin: "chénggōng", answer: "success; to succeed", explanation: "成功 (chénggōng) can be a noun (success) or a verb (to succeed).", funFact: "Success is a highly valued concept in Chinese culture, often linked to hard work and perseverance." },
+                        { simplified: "诚实", pinyin: "chéngshí", answer: "honest; honesty", explanation: "诚实 (chéngshí) describes someone as honest or refers to honesty.", funFact: "Honesty is a core virtue emphasized in traditional Chinese ethics." },
+                        { simplified: "吃惊", pinyin: "chījīng", answer: "to be surprised; to be shocked", explanation: "吃惊 (chījīng) means to be surprised or shocked.", funFact: "It literally means 'eat fright', reflecting the visceral reaction to surprise." },
+                        { simplified: "重新", pinyin: "chóngxīn", answer: "again; anew; afresh", explanation: "重新 (chóngxīn) means again, anew, or afresh, implying starting over or doing something differently.", funFact: "It emphasizes a fresh start or a redo, unlike 再 (zài) which is just 'again'." },
+                        { simplified: "抽烟", pinyin: "chōuyān", answer: "to smoke (cigarettes)", explanation: "抽烟 (chōuyān) means to smoke cigarettes.", funFact: "Smoking rates in China have been historically high, though public health campaigns are increasingly visible." },
+                        { simplified: "出差", pinyin: "chūchāi", answer: "to go on a business trip", explanation: "出差 (chūchāi) means to go on a business trip.", funFact: "Business travel is common in China given its vast geography and economic activity." },
+                        { simplified: "出发", pinyin: "chūfā", answer: "to set off; to depart", explanation: "出发 (chūfā) means to set off or depart.", funFact: "It implies the beginning of a journey or mission." },
+                        { simplified: "出生", pinyin: "chūshēng", answer: "to be born", explanation: "出生 (chūshēng) means to be born.", funFact: "Birth dates and times are important in Chinese astrology for determining one's zodiac sign and destiny." },
+                        { simplified: "传真", pinyin: "chuánzhēn", answer: "fax; to send a fax", explanation: "传真 (chuánzhēn) means fax (noun) or to send a fax (verb).", funFact: "While fax machines are less common globally now, they might still be used in some older Chinese businesses or government offices." },
+                        { simplified: "窗户", pinyin: "chuānghu", answer: "window", explanation: "窗户 (chuānghu) is the word for window.", funFact: "Traditional Chinese architecture often features intricately designed windows." },
+                        { simplified: "词典", pinyin: "cídiǎn", answer: "dictionary", explanation: "词典 (cídiǎn) is the word for dictionary.", funFact: "Electronic dictionaries and translation apps are widely used by language learners in China." },
+                        { simplified: "从来", pinyin: "cónglái", answer: "always (in negative sentences); from past till now", explanation: "从来 (cónglái) means 'from past till now', often used in negative sentences to mean 'never' or 'not ever'.", funFact: "e.g., '我从来没去过' (Wǒ cónglái méi qùguo - I have never been)." },
+                        { simplified: "粗心", pinyin: "cūxīn", answer: "careless; thoughtless", explanation: "粗心 (cūxīn) describes someone as careless or thoughtless.", funFact: "It's the opposite of 细心 (xìxīn - careful/meticulous)." },
+                        { simplified: "答案", pinyin: "dá'àn", answer: "answer; solution", explanation: "答案 (dá'àn) refers to an answer or solution to a question or problem.", funFact: "It's a key word in academic and problem-solving contexts." },
+                        { simplified: "打招呼", pinyin: "dǎ zhāohu", answer: "to greet; to say hello", explanation: "打招呼 (dǎ zhāohu) means to greet or say hello.", funFact: "Chinese greetings often involve asking about meals or daily activities rather than just 'how are you?'." },
+                        { simplified: "打针", pinyin: "dǎ zhēn", answer: "to give/receive an injection", explanation: "打针 (dǎ zhēn) means to give or receive an injection.", funFact: "It literally means 'to hit a needle'." },
+                        { simplified: "大概", pinyin: "dàgài", answer: "probably; approximately", explanation: "大概 (dàgài) means probably or approximately.", funFact: "It expresses a degree of uncertainty or estimation." },
+                        { simplified: "戴", pinyin: "dài", answer: "to wear (accessories)", explanation: "戴 (dài) is specifically used for wearing accessories like hats, glasses, watches, or jewelry.", funFact: "It distinguishes itself from 穿 (chuān) which is for clothes." },
+                        { simplified: "代表", pinyin: "dàibiǎo", answer: "to represent; representative", explanation: "代表 (dàibiǎo) can be a verb 'to represent' or a noun 'representative'.", funFact: "It's often used in formal settings, like a country's representative or a company's delegate." },
+                        { simplified: "代替", pinyin: "dàitì", answer: "to replace; to substitute", explanation: "代替 (dàitì) means to replace or substitute something or someone.", funFact: "It implies taking the place of another." },
+                        { simplified: "大夫", pinyin: "dàifu", answer: "doctor", explanation: "大夫 (dàifu) is another common term for doctor, often used interchangeably with 医生 (yīshēng).", funFact: "It has a slightly more traditional feel but is widely understood." },
+                        { simplified: "当", pinyin: "dāng", answer: "to be; to act as; at (a time)", explanation: "当 (dāng) is a versatile word meaning 'to be' (a profession), 'to act as', or 'at' (a specific time).", funFact: "Its meaning varies greatly depending on context and tone." },
+                        { simplified: "当地", pinyin: "dāngdì", answer: "local (place)", explanation: "当地 (dāngdì) refers to the local place or locality.", funFact: "It's often used to describe local customs, food, or residents." },
+                        { simplified: "刀", pinyin: "dāo", answer: "knife", explanation: "刀 (dāo) is the general term for knife.", funFact: "Chinese cuisine relies heavily on precise knife skills for chopping and slicing ingredients." },
+                        { simplified: "导游", pinyin: "dǎoyóu", answer: "tour guide", explanation: "导游 (dǎoyóu) combines 'guide' (导 dǎo) and 'travel' (游 yóu).", funFact: "Tour guides play a crucial role in showing visitors around China's many attractions." },
+                        { simplified: "倒", pinyin: "dào", answer: "to fall; to tumble; to pour", explanation: "倒 (dào) can mean to fall, tumble, or pour.", funFact: "It has another pronunciation, dǎo, meaning 'to inverse' or 'to overturn'." },
+                        { simplified: "到底", pinyin: "dàodǐ", answer: "finally; in the end; after all", explanation: "到底 (dàodǐ) means finally, in the end, or after all, often used in questions to seek clarification or truth.", funFact: "It implies digging to the bottom of something or a thorough inquiry." },
+                        { simplified: "道歉", pinyin: "dàoqiàn", answer: "to apologize", explanation: "道歉 (dàoqiàn) means to apologize.", funFact: "It's often accompanied by a phrase like '对不起' (duìbuqǐ - sorry)." },
+                        { simplified: "得意", pinyin: "déyì", answer: "proud of oneself; complacent", explanation: "得意 (déyì) means to be proud of oneself or complacent, often in a positive or slightly self-satisfied way.", funFact: "It implies achieving something and feeling pleased about it." },
+                        { simplified: "地球", pinyin: "dìqiú", answer: "Earth; the globe", explanation: "地球 (dìqiú) means Earth or the globe.", funFact: "Literally 'ground sphere'." },
+                        { simplified: "地址", pinyin: "dìzhǐ", answer: "address", explanation: "地址 (dìzhǐ) refers to a physical address.", funFact: "Providing a clear address is essential for deliveries and navigation in China." },
+                        { simplified: "掉", pinyin: "diào", answer: "to fall; to drop; to lose", explanation: "掉 (diào) means to fall, drop, or lose (something).", funFact: "It's a common verb for accidental occurrences." },
+                        { simplified: "调查", pinyin: "diàochá", answer: "to investigate; investigation", explanation: "调查 (diàochá) can be a verb 'to investigate' or a noun 'investigation'.", funFact: "It implies a systematic inquiry to gather facts or information." }
+                    ],
+                    hsk5: [
+                        { simplified: "哎呀", pinyin: "āiyā", answer: "oh dear!; gosh!", explanation: "哎呀 (āiyā) is an exclamation expressing surprise, shock, or exasperation.", funFact: "It's a very common emotional interjection in spoken Chinese." },
+                        { simplified: "唉", pinyin: "ài", answer: "alas; oh (sigh)", explanation: "唉 (ài) is an interjection expressing sadness, regret, or a sigh.", funFact: "It conveys a deeper sense of lament or resignation." },
+                        { simplified: "爱护", pinyin: "àihù", answer: "to cherish; to take good care of", explanation: "爱护 (àihù) means to cherish, treasure, or take good care of something or someone.", funFact: "It implies a sense of protection and valuing, often used for nature, animals, or children." },
+                        { simplified: "爱心", pinyin: "àixīn", answer: "compassion; love (noun)", explanation: "爱心 (àixīn) means compassion, kindness, or a loving heart.", funFact: "It's often used to describe someone's caring nature or charitable spirit." },
+                        { simplified: "安慰", pinyin: "ānwèi", answer: "to comfort; to console", explanation: "安慰 (ānwèi) means to comfort or console someone.", funFact: "It's an important action when someone is upset or sad." },
+                        { simplified: "安装", pinyin: "ānzhuāng", answer: "to install; to set up", explanation: "安装 (ānzhuāng) means to install or set up equipment, software, or facilities.", funFact: "It's a practical term used for anything from installing an app to assembling furniture." },
+                        { simplified: "岸", pinyin: "àn", answer: "shore; bank; coast", explanation: "岸 (àn) refers to the shore, bank (of a river), or coast.", funFact: "It's often seen in geographical terms like 海岸 (hǎi'àn - seashore) or 河岸 (hé'àn - river bank)." },
+                        { simplified: "暗", pinyin: "àn", answer: "dark; dim; secretly", explanation: "暗 (àn) means dark, dim, or can imply something done secretly.", funFact: "It's the opposite of 亮 (liàng - bright)." },
+                        { simplified: "熬夜", pinyin: "áoyè", answer: "to stay up late or all night", explanation: "熬夜 (áoyè) means to stay up late or all night.", funFact: "This is a common habit among students studying for exams or people with demanding work schedules." },
+                        { simplified: "把握", pinyin: "bǎwò", answer: "to grasp; to seize; certainty", explanation: "把握 (bǎwò) can mean to grasp (an opportunity), to seize, or a sense of certainty (noun).", funFact: "It implies having control or confidence over a situation." },
+                        { simplified: "摆", pinyin: "bǎi", answer: "to put; to place; to sway", explanation: "摆 (bǎi) means to put, place, or to sway.", funFact: "It's commonly used when arranging objects or describing a swinging motion." },
+                        { simplified: "办理", pinyin: "bànlǐ", answer: "to handle; to conduct; to transact", explanation: "办理 (bànlǐ) means to handle, conduct, or transact (business, procedures, etc.).", funFact: "It's a formal term often used in administrative or official contexts." },
+                        { simplified: "傍晚", pinyin: "bàngwǎn", answer: "dusk; evening", explanation: "傍晚 (bàngwǎn) refers to the time around dusk or early evening.", funFact: "It describes the period when the sun sets and daylight fades." },
+                        { simplified: "包裹", pinyin: "bāoguǒ", answer: "parcel; package", explanation: "包裹 (bāoguǒ) means a parcel or package.", funFact: "With the rise of e-commerce, receiving and sending parcels is extremely common in China." },
+                        { simplified: "包含", pinyin: "bāohán", answer: "to contain; to include", explanation: "包含 (bāohán) means to contain or include.", funFact: "It implies that something is comprised of or encompasses certain elements." },
+                        { simplified: "薄", pinyin: "báo", answer: "thin", explanation: "薄 (báo) describes something that is thin (opposite of thick).", funFact: "It can also be pronounced bó, as in 薄荷 (bòhe - mint)." },
+                        { simplified: "宝贝", pinyin: "bǎobèi", answer: "treasure; baby (endearing term)", explanation: "宝贝 (bǎobèi) means treasure, or is an endearing term for a baby or loved one.", funFact: "It conveys a sense of preciousness and affection." },
+                        { simplified: "宝贵", pinyin: "bǎoguì", answer: "valuable; precious", explanation: "宝贵 (bǎoguì) describes something as valuable or precious, often referring to abstract things like time or experience.", funFact: "It carries a stronger sense of irreplaceable value than just 'expensive'." },
+                        { simplified: "保持", pinyin: "bǎochí", answer: "to keep; to maintain; to preserve", explanation: "保持 (bǎochí) means to keep, maintain, or preserve a state or condition.", funFact: "It's often used in phrases like '保持安静' (bǎochí ānjìng - keep quiet) or '保持健康' (bǎochí jiànkāng - maintain health)." },
+                        { simplified: "保存", pinyin: "bǎocún", answer: "to preserve; to save (data)", explanation: "保存 (bǎocún) means to preserve (food, cultural relics) or to save (data, files).", funFact: "It implies keeping something in a good state or storing it digitally." },
+                        { simplified: "保留", pinyin: "bǎoliú", answer: "to retain; to reserve; to keep", explanation: "保留 (bǎoliú) means to retain, reserve, or keep something for future use or consideration.", funFact: "It implies setting something aside or holding onto it." },
+                        { simplified: "保险", pinyin: "bǎoxiǎn", answer: "insurance; safe", explanation: "保险 (bǎoxiǎn) can mean insurance (noun) or safe/secure (adjective).", funFact: "Insurance is an increasingly important part of life in China, covering health, car, and property." },
+                        { simplified: "报到", pinyin: "bàodào", answer: "to report for duty; to check in", explanation: "报到 (bàodào) means to report for duty, check in (e.g., at a hotel, school), or register arrival.", funFact: "It's commonly used when arriving at a new job, school, or event." },
+                        { simplified: "报道", pinyin: "bàodào", answer: "to report (news); news report", explanation: "报道 (bàodào) can be a verb 'to report' (news) or a noun 'news report'.", funFact: "It specifically refers to journalistic reporting or announcements." },
+                        { simplified: "报告", pinyin: "bàogào", answer: "report; to report", explanation: "报告 (bàogào) can be a noun (report) or a verb (to report).", funFact: "It's a formal term used for official reports or academic presentations." },
+                        { simplified: "报社", pinyin: "bàoshè", answer: "newspaper office", explanation: "报社 (bàoshè) refers to a newspaper office or agency.", funFact: "社 (shè) means 'agency' or 'society'." },
+                        { simplified: "抱怨", pinyin: "bàoyuàn", answer: "to complain; to grumble", explanation: "抱怨 (bàoyuàn) means to complain or grumble.", funFact: "It expresses dissatisfaction or grievance." },
+                        { simplified: "背", pinyin: "bèi", answer: "to carry on the back; back (body part)", explanation: "背 (bèi) can mean to carry something on one's back (verb) or the back of the body (noun).", funFact: "It has another pronunciation, bēi, meaning 'back (of the body)'." },
+                        { simplified: "悲观", pinyin: "bēiguān", answer: "pessimistic", explanation: "悲观 (bēiguān) describes a pessimistic outlook.", funFact: "It's the opposite of 乐观 (lèguān - optimistic)." },
+                        { simplified: "背景", pinyin: "bèijǐng", answer: "background", explanation: "背景 (bèijǐng) refers to a background, either literally (scenery) or figuratively (context, history).", funFact: "It's commonly used to describe someone's family background, educational background, or the setting of a story." },
+                        { simplified: "被子", pinyin: "bèizi", answer: "quilt; blanket", explanation: "被子 (bèizi) refers to a quilt or blanket.", funFact: "In Chinese households, quilts are often thicker and warmer than Western blankets, especially for colder regions." },
+                        { simplified: "本科", pinyin: "běnkē", answer: "undergraduate course; undergraduate (person)", explanation: "本科 (běnkē) refers to an undergraduate course of study or an undergraduate student.", funFact: "It's distinct from postgraduate studies like master's (硕士 shuòshì) or doctoral (博士 bóshì) degrees." },
+                        { simplified: "本领", pinyin: "běnlǐng", answer: "skill; ability; capability", explanation: "本领 (běnlǐng) refers to a skill, ability, or capability.", funFact: "It often implies a practical aptitude or talent." },
+                        { simplified: "本质", pinyin: "běnzhì", answer: "essence; nature; intrinsic quality", explanation: "本质 (běnzhì) refers to the essence, nature, or intrinsic quality of something.", funFact: "It delves into the fundamental characteristics rather than superficial aspects." },
+                        { simplified: "比例", pinyin: "bǐlì", answer: "proportion; ratio; scale", explanation: "比例 (bǐlì) means proportion, ratio, or scale.", funFact: "It's used in mathematics, art, and to describe relationships between quantities." },
+                        { simplified: "彼此", pinyin: "bǐcǐ", answer: "each other; one another", explanation: "彼此 (bǐcǐ) means 'each other' or 'one another'.", funFact: "It implies reciprocity and shared action or feeling between two parties." },
+                        { simplified: "必然", pinyin: "bìrán", answer: "inevitable; certainly", explanation: "必然 (bìrán) means inevitable or certainly, indicating a high degree of certainty or necessity.", funFact: "It often suggests a logical or natural consequence." },
+                        { simplified: "必需", pinyin: "bìxū", answer: "essential; indispensable", explanation: "必需 (bìxū) describes something as essential or indispensable, usually as an adjective.", funFact: "It implies something that is absolutely required." },
+                        { simplified: "必要", pinyin: "bìyào", answer: "necessary; essential", explanation: "必要 (bìyào) means necessary or essential, usually referring to conditions or requirements.", funFact: "It's similar to 必需 but often used in a broader context for requirements." },
+                        { simplified: "毕竟", pinyin: "bìjìng", answer: "after all; all in all", explanation: "毕竟 (bìjìng) emphasizes that something is ultimately true or the reality of the situation.", funFact: "It's often used to conclude an argument or provide a rationale, similar to 'when all is said and done'." },
+                        { simplified: "避免", pinyin: "bìmiǎn", answer: "to avoid; to prevent", explanation: "避免 (bìmiǎn) means to avoid or prevent something from happening.", funFact: "It implies taking measures to keep away from a negative outcome." },
+                        { simplified: "编辑", pinyin: "biānjí", answer: "to edit; editor", explanation: "编辑 (biānjí) can be a verb 'to edit' or a noun 'editor'.", funFact: "It's commonly used in publishing, journalism, and media contexts." },
+                        { simplified: "鞭炮", pinyin: "biānpào", answer: "firecracker", explanation: "鞭炮 (biānpào) refers to firecrackers.", funFact: "Firecrackers are widely used in China during festivals, especially Chinese New Year, to scare away evil spirits and celebrate." },
+                        { simplified: "便", pinyin: "biàn", answer: "convenient; ordinary; excrement", explanation: "便 (biàn) is a versatile character. It can mean convenient (as in 方便 fāngbiàn), ordinary, or even excrement (as in 大便 dàbiàn - feces).", funFact: "Its meaning changes drastically with context and tone, often causing confusion." },
+                        { simplified: "辩论", pinyin: "biànlùn", answer: "to debate; debate", explanation: "辩论 (biànlùn) can be a verb 'to debate' or a noun 'debate'.", funFact: "Debates are an important part of academic and political discourse." },
+                        { simplified: "标点", pinyin: "biāodiǎn", answer: "punctuation; punctuation mark", explanation: "标点 (biāodiǎn) refers to punctuation or punctuation marks.", funFact: "Chinese punctuation has some unique marks not found in English, like the full stop (句号 jùhào) which is a small circle." },
+                        { simplified: "标志", pinyin: "biāozhì", answer: "sign; symbol; to symbolize", explanation: "标志 (biāozhì) can be a noun (sign, symbol, mark) or a verb (to symbolize).", funFact: "It represents something characteristic or a point of recognition." },
+                        { simplified: "表达", pinyin: "biǎodá", answer: "to express; to convey; expression", explanation: "表达 (biǎodá) means to express or convey thoughts, feelings, or ideas, or the expression itself.", funFact: "It focuses on the act of articulation and communication." },
+                        { simplified: "表面", pinyin: "biǎomiàn", answer: "surface; outside; appearance", explanation: "表面 (biǎomiàn) refers to the surface, outside, or outward appearance of something.", funFact: "It's often contrasted with the internal or true nature of something." },
+                        { simplified: "表明", pinyin: "biǎomíng", answer: "to make clear; to indicate; to show", explanation: "表明 (biǎomíng) means to make clear, indicate, or show something explicitly.", funFact: "It implies putting something on record or providing evidence." },
+                        { simplified: "表情", pinyin: "biǎoqíng", answer: "facial expression; countenance", explanation: "表情 (biǎoqíng) refers to facial expressions or countenance.", funFact: "Understanding non-verbal cues like facial expressions is crucial in cross-cultural communication." },
+                        { simplified: "表现", pinyin: "biǎoxiàn", answer: "to show; to display; performance", explanation: "表现 (biǎoxiàn) can mean to show or display (a quality), or refer to one's performance (noun).", funFact: "It often relates to how someone performs or behaves in a situation." },
+                        { simplified: "病毒", pinyin: "bìngdú", answer: "virus", explanation: "病毒 (bìngdú) refers to a virus.", funFact: "The characters 病 (bìng) means 'illness' and 毒 (dú) means 'poison', literally 'illness poison'." },
+                        { simplified: "玻璃", pinyin: "bōli", answer: "glass", explanation: "玻璃 (bōli) is the word for glass (material).", funFact: "It's used for windows, bottles, and various transparent objects." },
+                        { simplified: "脖子", pinyin: "bózi", answer: "neck", funFact: "In Chinese martial arts, the neck is considered a vulnerable but important area." },
+                        { simplified: "博物馆", pinyin: "bówùguǎn", answer: "museum", explanation: "博物馆 (bówùguǎn) combines 'broad' (博 bó), 'things/objects' (物 wù), and 'hall' (馆 guǎn).", funFact: "China has numerous museums showcasing its rich history, art, and culture." },
+                        { simplified: "补充", pinyin: "bǔchōng", answer: "to supplement; to replenish", explanation: "补充 (bǔchōng) means to supplement or replenish something.", funFact: "It's used when adding missing parts or topping up resources." },
+                        { simplified: "不安", pinyin: "bù'ān", answer: "uneasy; disturbed; restless", explanation: "不安 (bù'ān) describes a state of uneasiness, disturbance, or restlessness.", funFact: "It implies a lack of peace or stability in one's mind or situation." },
+                        { simplified: "打扰", pinyin: "dǎrǎo", answer: "to disturb; to bother", explanation: "打扰 (dǎrǎo) is commonly used to apologize for inconveniencing someone, e.g., '不好意思打扰了' (Bù hǎoyìsi dǎrǎole).", funFact: "The character 扰 (rǎo) contains the radical for 'hand' (扌) and 'young shoots' (尧), suggesting 'to disturb' by 'pulling at' young plants." },
+                        { simplified: "采取", pinyin: "cǎiqǔ", answer: "to adopt; to take (measures)", explanation: "采取 (cǎiqǔ) means to adopt or take (measures, policies, actions).", funFact: "It's a formal verb used for deliberate implementation of steps." },
+                        { simplified: "参考", pinyin: "cānkǎo", answer: "to consult; to refer to; reference", explanation: "参考 (cānkǎo) can be a verb 'to consult' or 'to refer to', or a noun 'reference'.", funFact: "It's common in academic and research settings." },
+                        { simplified: "操场", pinyin: "cāochǎng", answer: "sports ground; playground", explanation: "操场 (cāochǎng) refers to a sports ground or playground.", funFact: "Many Chinese schools have large 操场 for physical education and outdoor activities." },
+                        { simplified: "厕所", pinyin: "cèsuǒ", answer: "toilet; restroom", explanation: "厕所 (cèsuǒ) is a common term for toilet or restroom.", funFact: "In public restrooms, you might encounter squat toilets more often than Western-style ones." },
+                        { simplified: "曾经", pinyin: "céngjīng", answer: "once; at one time", explanation: "曾经 (céngjīng) indicates that an action or state occurred at some time in the past.", funFact: "It emphasizes that something happened 'once upon a time' or 'previously'." },
+                        { simplified: "产品", pinyin: "chǎnpǐn", answer: "product", explanation: "产品 (chǎnpǐn) refers to a product or manufactured goods.", funFact: "China is a major global manufacturer and exporter of various products." },
+                        { simplified: "产生", pinyin: "chǎnshēng", answer: "to produce; to generate; to emerge", explanation: "产生 (chǎnshēng) means to produce, generate, or bring about something (often abstract, like ideas or effects).", funFact: "It implies creation or emergence." },
+                        { simplified: "常识", pinyin: "chángshí", answer: "common sense; general knowledge", explanation: "常识 (chángshí) refers to common sense or general knowledge.", funFact: "It's about basic understandings widely accepted in society." },
+                        { simplified: "长途", pinyin: "chángtú", answer: "long distance", explanation: "长途 (chángtú) means long distance.", funFact: "It's often used with travel or calls, e.g., 长途电话 (chángtú diànhuà - long-distance call)." },
+                        { simplified: "成熟", pinyin: "chéngshú", answer: "mature; ripe", explanation: "成熟 (chéngshú) means mature (for people or ideas) or ripe (for fruit).", funFact: "It implies reaching a developed or ready state." },
+                        { simplified: "称", pinyin: "chēng", answer: "to call; to weigh; to name", explanation: "称 (chēng) is a versatile verb meaning to call, weigh, or name.", funFact: "It has different meanings depending on context and tone, making it tricky." },
+                        { simplified: "程度", pinyin: "chéngdù", answer: "degree; level; extent", explanation: "程度 (chéngdù) refers to a degree, level, or extent of something.", funFact: "It's used to quantify the intensity or depth of qualities or actions." }
+                    ]
+                };
+
+                const getAllUniqueAnswers = () => {
+                    const allAnswers = new Set();
+                    for (const level in vocab) {
+                        vocab[level].forEach(item => {
+                            allAnswers.add(item.answer);
+                        });
+                    }
+                    return Array.from(allAnswers);
+                };
+
+                const getVocabByLevels = (levels) => {
+                    return levels.flatMap(level => vocab[`hsk${level}`] || []);
+                };
+
+                return {
+                    getVocabByLevels,
+                    getAllUniqueAnswers
+                };
+            })();
+
+            // --- Module 2: Settings Management ---
+            const SettingsManager = (() => {
+                const SETTINGS_KEYS = {
+                    HSK_LEVELS: 'hskLevels',
+                    QUANTITY: 'quantity',
+                    SHOW_PINYIN: 'showPinyin',
+                    DARK_MODE: 'darkMode'
+                };
+
+                let currentSettings = {
+                    savedLevels: ['1'],
+                    savedQuantity: '20',
+                    showPinyin: true,
+                    darkMode: true
+                };
+
+                const getSetting = (key) => currentSettings[key];
+                
+                const setSetting = (key, value) => {
+                    currentSettings[key] = value;
+                    try {
+                        if (typeof value === 'boolean' || typeof value === 'number') {
+                            localStorage.setItem(SETTINGS_KEYS[key], value.toString());
+                        } else if (Array.isArray(value)) {
+                            localStorage.setItem(SETTINGS_KEYS[key], JSON.stringify(value));
+                        } else {
+                            localStorage.setItem(SETTINGS_KEYS[key], value);
+                        }
+                    } catch (e) {
+                        console.error(`Error saving setting '${key}' to local storage:`, e);
+                    }
+                };
+
+                const loadSettings = (domElements) => {
+                    try {
+                        // Dark Mode
+                        const darkModeEnabled = localStorage.getItem(SETTINGS_KEYS.DARK_MODE);
+                        if (darkModeEnabled === null) { // Default to dark mode if no setting saved
+                            document.body.classList.add('dark-mode');
+                            if (domElements.darkMode) domElements.darkMode.checked = true;
+                            setSetting('darkMode', true);
+                        } else {
+                            const isDarkMode = darkModeEnabled === 'true';
+                            document.body.classList.toggle('dark-mode', isDarkMode);
+                            if (domElements.darkMode) domElements.darkMode.checked = isDarkMode;
+                            setSetting('darkMode', isDarkMode);
+                        }
+
+                        // HSK Levels
+                        const savedLevels = JSON.parse(localStorage.getItem(SETTINGS_KEYS.HSK_LEVELS));
+                        if (savedLevels && savedLevels.length > 0) {
+                            setSetting('savedLevels', savedLevels);
+                            document.querySelectorAll('input[name="hsk-level"]').forEach(cb => {
+                                cb.checked = savedLevels.includes(cb.value);
+                            });
+                        } else { // Default to HSK 1 if nothing saved
+                            const defaultHsk1 = document.querySelector('input[name="hsk-level"][value="1"]');
+                            if (defaultHsk1) defaultHsk1.checked = true;
+                            setSetting('savedLevels', ['1']);
+                        }
+
+                        // Quantity
+                        const savedQuantity = localStorage.getItem(SETTINGS_KEYS.QUANTITY);
+                        if (savedQuantity) {
+                            setSetting('savedQuantity', savedQuantity);
+                            const quantityRadio = document.querySelector(`input[name="quantity"][value="${savedQuantity}"]`);
+                            if (quantityRadio) quantityRadio.checked = true;
+                        } else { // Default to 20 if nothing saved
+                            const defaultQuantity20 = document.querySelector('input[name="quantity"][value="20"]');
+                            if (defaultQuantity20) defaultQuantity20.checked = true;
+                            setSetting('savedQuantity', '20');
+                        }
+
+                        // Show Pinyin
+                        const showPinyin = localStorage.getItem(SETTINGS_KEYS.SHOW_PINYIN);
+                        if (showPinyin !== null) {
+                            const isPinyinVisible = showPinyin === 'true';
+                            setSetting('showPinyin', isPinyinVisible);
+                            if (domElements.pinyin) domElements.pinyin.checked = isPinyinVisible;
+                        } else { // Default to true
+                            setSetting('showPinyin', true);
+                            if (domElements.pinyin) domElements.pinyin.checked = true;
+                        }
+
+                    } catch (e) {
+                        console.error("Failed to load settings from local storage, falling back to defaults:", e);
+                        // Fallback to default state if local storage fails
+                        setSetting('savedLevels', ['1']);
+                        setSetting('savedQuantity', '20');
+                        setSetting('showPinyin', true);
+                        setSetting('darkMode', true);
+                        
+                        document.body.classList.add('dark-mode');
+                        if (domElements.darkMode) domElements.darkMode.checked = true;
+                        const defaultHsk1 = document.querySelector('input[name="hsk-level"][value="1"]');
+                        if (defaultHsk1) defaultHsk1.checked = true;
+                        const defaultQuantity20 = document.querySelector('input[name="quantity"][value="20"]');
+                        if (defaultQuantity20) defaultQuantity20.checked = true;
+                        if (domElements.pinyin) domElements.pinyin.checked = true;
+                    }
+                };
+
+                const saveCurrentSettings = () => {
+                    const selectedLevels = Array.from(document.querySelectorAll('input[name="hsk-level"]:checked')).map(cb => cb.value);
+                    const selectedQuantity = document.querySelector('input[name="quantity"]:checked')?.value || '20';
+                    const showPinyin = document.getElementById('pinyin-toggle')?.checked || false;
+                    const darkMode = document.body.classList.contains('dark-mode');
+
+                    setSetting('savedLevels', selectedLevels);
+                    setSetting('savedQuantity', selectedQuantity);
+                    setSetting('showPinyin', showPinyin);
+                    setSetting('darkMode', darkMode);
+                };
+
+                return {
+                    loadSettings,
+                    saveCurrentSettings,
+                    getSetting
+                };
+            })();
+
+            // --- Module 3: UI Manager ---
+            const UIManager = (() => {
+                const dom = {}; // It will be populated by cacheDomElements
+                let activeScreen = 'mainMenu';
+
+                const icons = {
+                    correct: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`,
+                    incorrect: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`,
+                };
+
+                const cacheDomElements = () => {
+                    const elements = {
+                        mainContainer: document.querySelector('.main-container'),
+                        screens: {
+                            mainMenu: document.getElementById('main-menu-screen'),
+                            quizSettings: document.getElementById('quiz-settings-screen'),
+                            quiz: document.getElementById('quiz-container'),
+                            results: document.getElementById('results-screen'),
+                            settings: document.getElementById('settings-screen')
+                        },
+                        modals: {
+                            about: document.getElementById('about-modal'),
+                            hint: document.getElementById('hint-window'),
+                            confirmQuit: document.getElementById('confirm-quit-modal')
+                        },
+                        buttons: {
+                            startNewQuiz: document.getElementById('start-new-quiz-btn'),
+                            settings: document.getElementById('settings-btn'),
+                            about: document.getElementById('about-btn'),
+                            startQuiz: document.getElementById('start-quiz-btn'),
+                            backToMainFromQuizSetup: document.getElementById('back-to-main-from-quiz-setup-btn'),
+                            endQuiz: document.getElementById('end-quiz-btn'),
+                            cancelQuit: document.getElementById('cancel-quit-btn'),
+                            confirmQuit: document.getElementById('confirm-quit-btn'),
+                            backToMainFromSettings: document.getElementById('back-to-main-from-settings-btn'),
+                            playAgain: document.getElementById('play-again-btn'),
+                            newQuizFromResults: document.getElementById('new-quiz-from-results-btn'),
+                            backToMainFromResults: document.getElementById('back-to-main-from-results-btn'),
+                            closeAbout: document.getElementById('close-about-btn'), 
+                            closeHint: document.getElementById('close-hint-btn')
+                        },
+                        toggles: {
+                            darkMode: document.getElementById('dark-mode-toggle'),
+                            pinyin: document.getElementById('pinyin-toggle')
+                        },
+                        quizElements: {
+                            hanziDisplay: document.getElementById('hanzi-display'),
+                            pinyinDisplay: document.getElementById('pinyin-display'),
+                            feedback: document.getElementById('feedback'),
+                            optionsContainer: document.getElementById('options-container'),
+                            scoreContainer: document.getElementById('score-container'),
+                            hintExplanation: document.getElementById('hint-explanation'),
+                            funFact: document.getElementById('fun-fact'),
+                            finalScore: document.getElementById('final-score'),
+                            finalAccuracy: document.getElementById('final-accuracy'),
+                            finalTime: document.getElementById('final-time'),
+                            resultsListContainer: document.getElementById('results-list-container')
+                        }
+                    };
+
+                    // Validate critical elements
+                    if (!elements.mainContainer) throw new Error("Critical: Main container not found.");
+                    for (const key in elements.screens) {
+                        if (!elements.screens[key]) throw new Error(`Critical: Screen element '${key}' not found.`);
+                    }
+                    for (const key in elements.buttons) {
+                        if (!elements.buttons[key]) console.warn(`Warning: Button element '${key}' not found.`);
+                    }
+                    for (const key in elements.toggles) {
+                        if (!elements.toggles[key]) console.warn(`Warning: Toggle element '${key}' not found.`);
+                    }
+                    // Specific check for critical quiz elements needed for quiz to even start
+                    const criticalQuizElements = ['hanziDisplay', 'optionsContainer', 'scoreContainer', 'pinyinDisplay'];
+                    for (const key of criticalQuizElements) {
+                        if (!elements.quizElements[key]) throw new Error(`Critical: Quiz element '${key}' not found. Quiz functionality is severely impaired.`);
+                    }
+
+
+                    Object.assign(dom, elements); // Merge elements into the 'dom' object
+                    return dom; // Return cached elements for other modules if needed
+                };
+
+                const showScreen = (screenName) => {
+                    if (activeScreen === screenName) return;
+                    
+                    const currentScreen = dom.screens[activeScreen];
+                    const newScreen = dom.screens[screenName];
+
+                    if (currentScreen) {
+                        currentScreen.classList.remove('active');
+                        currentScreen.setAttribute('aria-hidden', 'true');
+                    }
+                    
+                    if (newScreen) {
+                        void newScreen.offsetWidth; // Force reflow for transition
+                        newScreen.classList.add('active');
+                        newScreen.setAttribute('aria-hidden', 'false');
+                        newScreen.focus(); 
+                    } else {
+                        console.error(`Screen element '${screenName}' not found. Cannot switch screens.`);
+                        return;
+                    }
+                    activeScreen = screenName;
+                };
+
+                const toggleModal = (modalName, show) => {
+                    const modalElement = dom.modals[modalName];
+                    if (modalElement) {
+                        modalElement.classList.toggle('active', show);
+                        modalElement.setAttribute('aria-hidden', !show);
+                        if (show) {
+                            const focusableElements = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+                            const firstFocusableElement = modalElement.querySelector(focusableElements);
+                            firstFocusableElement ? firstFocusableElement.focus() : modalElement.focus();
+                        } else {
+                            dom.screens[activeScreen]?.focus(); // Return focus to the active screen
+                        }
+                    } else {
+                        console.warn(`Modal element '${modalName}' not found. Cannot toggle.`);
+                    }
+                };
+
+                const updateQuizQuestion = (question, currentQuestionIndex, totalQuestions, score) => {
+                    if (dom.quizElements.hanziDisplay) dom.quizElements.hanziDisplay.textContent = question.simplified;
+                    if (dom.quizElements.scoreContainer) dom.quizElements.scoreContainer.innerHTML = `Question: ${currentQuestionIndex + 1} / ${totalQuestions} | Score: ${score}`;
+                    updatePinyinDisplay(question.pinyin, SettingsManager.getSetting('showPinyin')); // Pass showPinyin setting
+                };
+
+                const updatePinyinDisplay = (pinyin, showPinyinSetting) => {
+                    if (dom.quizElements.pinyinDisplay) {
+                        dom.quizElements.pinyinDisplay.textContent = showPinyinSetting && pinyin ? pinyin : '';
+                        dom.quizElements.pinyinDisplay.setAttribute('aria-hidden', !showPinyinSetting);
+                    }
+                };
+
+                const displayOptions = (options, checkAnswerCallback) => {
+                    if (!dom.quizElements.optionsContainer) {
+                        console.error("Options container element not found. Cannot display options.");
+                        return;
+                    }
+                    dom.quizElements.optionsContainer.innerHTML = ''; // Clear previous options
+                    options.forEach((option, index) => {
+                        const button = document.createElement('button');
+                        button.className = 'action-btn option-btn';
+                        button.textContent = option;
+                        button.style.setProperty('--option-index', index);
+                        button.setAttribute('aria-label', `Choose ${option}`);
+                        button.onclick = () => checkAnswerCallback(button);
+                        dom.quizElements.optionsContainer.appendChild(button);
+                    });
+                };
+
+                const highlightAnswer = (selectedButton, correctAnswerText) => {
+                    if (!dom.quizElements.optionsContainer) return;
+                    dom.quizElements.optionsContainer.querySelectorAll('.option-btn').forEach(btn => {
+                        btn.disabled = true;
+                        btn.setAttribute('aria-disabled', 'true');
+                        if (btn.textContent === correctAnswerText) {
+                            btn.classList.add('correct');
+                        } else if (btn === selectedButton) {
+                            btn.classList.add('incorrect');
+                        }
+                    });
+                };
+
+                const displayFeedback = (message, isCorrect) => {
+                    if (!dom.quizElements.feedback) {
+                        console.warn("Feedback display element not found, skipping visual feedback.");
+                        return;
+                    }
+                    const icon = isCorrect ? icons.correct : icons.incorrect;
+                    dom.quizElements.feedback.innerHTML = `${icon} ${message}`;
+                    dom.quizElements.feedback.classList.add('show');
+                    dom.quizElements.feedback.setAttribute('aria-live', 'polite');
+                    dom.quizElements.feedback.setAttribute('aria-atomic', 'true');
+                };
+
+                const hideFeedback = () => {
+                    if (!dom.quizElements.feedback) return;
+                    dom.quizElements.feedback.classList.remove('show');
+                    dom.quizElements.feedback.removeAttribute('aria-live');
+                    dom.quizElements.feedback.removeAttribute('aria-atomic');
+                };
+
+                const populateHintModal = (question) => {
+                    if (dom.quizElements.hintExplanation) {
+                        dom.quizElements.hintExplanation.textContent = question.explanation || `The correct answer for "${question.simplified}" is "${question.answer}".`;
+                    }
+                    if (dom.quizElements.funFact) {
+                        dom.quizElements.funFact.textContent = question.funFact ? `Fun Fact: ${question.funFact}` : "";
+                    }
+                };
+
+                const updateResultsScreen = (results, startTime) => {
+                    const totalQuestions = results.length;
+                    const correctAnswers = results.filter(r => r.isCorrect).length;
+                    const timeDiff = Math.round((new Date() - startTime) / 1000); 
+                    const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions * 100).toFixed(1) : 0;
+                    
+                    if (dom.quizElements.finalScore) dom.quizElements.finalScore.textContent = `${correctAnswers} / ${totalQuestions}`;
+                    if (dom.quizElements.finalAccuracy) dom.quizElements.finalAccuracy.textContent = `${accuracy}%`;
+                    if (dom.quizElements.finalTime) dom.quizElements.finalTime.textContent = `${Math.floor(timeDiff / 60)}m ${timeDiff % 60}s`;
+
+                    if (dom.quizElements.resultsListContainer) {
+                        dom.quizElements.resultsListContainer.innerHTML = results.map(result => `
+                            <div class="result-item">
+                                <div class="result-item-hanzi">${result.question.simplified}</div>
+                                <div class="result-item-details">
+                                    <p>Correct: ${result.question.answer}</p>
+                                    <p class="result-user-answer ${result.isCorrect ? '' : 'incorrect-text'}">Your Answer: ${result.userAnswer}</p>
+                                </div>
+                                <div class="result-icon">${result.isCorrect ? icons.correct : icons.incorrect}</div>
+                            </div>`).join('');
+                    }
+                };
+
+                const resetQuizUI = () => {
+                    hideFeedback();
+                    if (dom.quizElements.optionsContainer) {
+                        dom.quizElements.optionsContainer.querySelectorAll('.option-btn').forEach(btn => {
+                            btn.className = 'action-btn option-btn'; // Reset classes
+                            btn.disabled = false;
+                            btn.removeAttribute('aria-disabled');
+                        });
+                    }
+                };
+
+                return {
+                    cacheDomElements,
+                    dom, // Expose cached DOM elements directly
+                    showScreen,
+                    toggleModal,
+                    updateQuizQuestion,
+                    displayOptions,
+                    highlightAnswer,
+                    displayFeedback,
+                    hideFeedback,
+                    populateHintModal,
+                    updateResultsScreen,
+                    updatePinyinDisplay,
+                    resetQuizUI
+                };
+            })();
+
+            // --- Module 4: Quiz Logic ---
+            const QuizLogic = ((dataManager, uiManager, settingsManager) => {
+                let quizState = {
+                    quizPool: [],
+                    fullAnswerPool: [],
+                    currentQuestion: null,
+                    questionCounter: 0,
+                    score: 0,
+                    startTime: null,
+                    quizResults: []
+                };
+
+                const initializeQuiz = (keepSettings = false) => {
+                    if (!keepSettings) {
+                        settingsManager.saveCurrentSettings();
+                    }
+
+                    const selectedLevels = settingsManager.getSetting('savedLevels');
+                    const selectedQuantity = settingsManager.getSetting('savedQuantity');
+                    
+                    const combinedVocab = dataManager.getVocabByLevels(selectedLevels);
+                    if (combinedVocab.length === 0) {
+                        alert("No vocabulary available for the selected HSK levels. Please select at least one HSK level with valid words.");
+                        uiManager.showScreen('quizSettings');
+                        return;
+                    }
+
+                    quizState.fullAnswerPool = dataManager.getAllUniqueAnswers();
+                    
+                    const filteredVocab = combinedVocab.filter(item => item && item.answer && typeof item.answer === 'string');
+                    let quizPool = [...filteredVocab].sort(() => 0.5 - Math.random());
+
+                    if (selectedQuantity !== 'all' && quizPool.length > parseInt(selectedQuantity, 10)) {
+                        quizPool = quizPool.slice(0, parseInt(selectedQuantity, 10));
+                    }
+                    quizState.quizPool = quizPool;
+
+                    if (quizPool.length === 0) { // Check quizPool.length after slicing
+                        alert("Not enough unique questions available with current settings. Please select more HSK levels or reduce the quantity.");
+                        uiManager.showScreen('quizSettings');
+                        return;
+                    }
+
+                    Object.assign(quizState, { score: 0, questionCounter: 0, quizResults: [], startTime: new Date() });
+                    
+                    uiManager.showScreen('quiz');
+                    loadQuestion();
+                };
+
+                const loadQuestion = () => {
+                    uiManager.resetQuizUI();
+                    if (quizState.questionCounter >= quizState.quizPool.length) {
+                        setTimeout(() => endQuiz(), 400);
+                        return;
+                    }
+
+                    quizState.currentQuestion = quizState.quizPool[quizState.questionCounter];
+                    
+                    uiManager.updateQuizQuestion(
+                        quizState.currentQuestion, 
+                        quizState.questionCounter, 
+                        quizState.quizPool.length, 
+                        quizState.score
+                    );
+
+                    const options = generateOptions(quizState.currentQuestion.answer);
+                    uiManager.displayOptions(options, checkAnswer);
+                };
+
+                const checkAnswer = (selectedButton) => {
+                    const selectedAnswer = selectedButton.textContent;
+                    const { answer, explanation, funFact } = quizState.currentQuestion;
+                    const isCorrect = selectedAnswer === answer;
+                    
+                    uiManager.highlightAnswer(selectedButton, answer);
+                    
+                    quizState.quizResults.push({ question: quizState.currentQuestion, userAnswer: selectedAnswer, isCorrect });
+                    
+                    const nextStep = () => {
+                        quizState.questionCounter++;
+                        loadQuestion();
+                    };
+                    
+                    if (isCorrect) {
+                        quizState.score++;
+                        uiManager.displayFeedback("Correct!", true);
+                        setTimeout(uiManager.hideFeedback, 1200);
+                        setTimeout(nextStep, 1200);
+                    } else {
+                        uiManager.displayFeedback("Not quite...", false);
+                        setTimeout(uiManager.hideFeedback, 1500); // Hide feedback a bit faster
+                        setTimeout(() => {
+                            if (explanation || funFact) {
+                                uiManager.populateHintModal(quizState.currentQuestion);
+                                uiManager.toggleModal('hint', true);
+                            } else {
+                                nextStep();
+                            }
+                        }, 1500); // Wait for feedback to fade before showing hint or next Q
+                    }
+                };
+                
+                const endQuiz = () => {
+                    uiManager.updateResultsScreen(quizState.quizResults, quizState.startTime);
+                    uiManager.showScreen('results');
+                };
+                
+                const generateOptions = (correctAnswer) => {
+                    const options = new Set([correctAnswer]);
+                    let potentialIncorrectAnswers = quizState.fullAnswerPool.filter(ans => ans !== correctAnswer);
+
+                    while (options.size < 4 && potentialIncorrectAnswers.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * potentialIncorrectAnswers.length);
+                        const chosenIncorrect = potentialIncorrectAnswers.splice(randomIndex, 1)[0];
+                        options.add(chosenIncorrect);
+                    }
+                    
+                    // Fallback to ensure 4 options even if the vocab pool is tiny
+                    let placeholderIndex = 0;
+                    while (options.size < 4) {
+                        options.add(`Opció ${++placeholderIndex}`); // Using Hungarian for placeholders
+                    }
+
+                    return Array.from(options).sort(() => 0.5 - Math.random());
+                };
+
+                return {
+                    initializeQuiz,
+                    endQuiz,
+                    loadQuestion, // Expose for hint modal closure
+                    getQuizState: () => quizState // Expose quiz state for access (e.g., for startTime in UIManager)
+                };
+
+            })(DataManager, UIManager, SettingsManager); // Pass modules as arguments
+
+            // --- Main App Initialization ---
+            const App = (() => {
+                const dom = UIManager.dom; // Get the shared DOM object from UIManager
+
+                const init = () => {
+                    try {
+                        UIManager.cacheDomElements(); // Populate UIManager's internal dom object
+                        SettingsManager.loadSettings(dom.toggles); // Load settings and update UI toggles using cached DOM elements
+                        setupEventListeners();
+                        UIManager.showScreen('mainMenu');
+                    } catch (error) {
+                        console.error("Fatal Error during application initialization:", error.message);
+                        document.body.innerHTML = "<p style='color:red; text-align:center; font-size:1.5rem;'>Alkalmazási hiba: Hiányzó kritikus komponensek. Kérlek, frissítsd az oldalt.</p>";
+                    }
+                };
+
+                const setupEventListeners = () => {
+                    // Global Controls
+                    dom.toggles.darkMode.addEventListener('change', () => {
+                        document.body.classList.toggle('dark-mode', dom.toggles.darkMode.checked);
+                        SettingsManager.setSetting('darkMode', dom.toggles.darkMode.checked);
+                    });
+
+                    // Main Menu Buttons
+                    dom.buttons.startNewQuiz.addEventListener('click', () => UIManager.showScreen('quizSettings'));
+                    dom.buttons.settings.addEventListener('click', () => UIManager.showScreen('settings'));
+                    dom.buttons.about.addEventListener('click', () => UIManager.toggleModal('about', true));
+
+                    // Quiz Settings Buttons
+                    dom.buttons.startQuiz.addEventListener('click', () => QuizLogic.initializeQuiz(false));
+                    dom.buttons.backToMainFromQuizSetup.addEventListener('click', () => UIManager.showScreen('mainMenu'));
+                    
+                    document.querySelectorAll('input[name="hsk-level"], input[name="quantity"]').forEach(input => {
+                        input.addEventListener('change', SettingsManager.saveCurrentSettings);
+                    });
+                    dom.toggles.pinyin.addEventListener('change', () => {
+                        SettingsManager.setSetting('showPinyin', dom.toggles.pinyin.checked);
+                        const currentQuestion = QuizLogic.getQuizState().currentQuestion;
+                        if (currentQuestion) {
+                            UIManager.updatePinyinDisplay(currentQuestion.pinyin, SettingsManager.getSetting('showPinyin'));
+                        }
+                    });
+
+                    // Quiz Container Buttons
+                    dom.buttons.endQuiz.addEventListener('click', () => UIManager.toggleModal('confirmQuit', true));
+
+                    // Modals specific close buttons
+                    dom.buttons.closeAbout.addEventListener('click', () => UIManager.toggleModal('about', false));
+                    dom.buttons.closeHint.addEventListener('click', () => {
+                        UIManager.toggleModal('hint', false);
+                        QuizLogic.loadQuestion(); // Continue to next question after closing hint
+                    });
+                    dom.buttons.cancelQuit.addEventListener('click', () => UIManager.toggleModal('confirmQuit', false));
+                    dom.buttons.confirmQuit.addEventListener('click', () => {
+                        UIManager.toggleModal('confirmQuit', false);
+                        UIManager.showScreen('mainMenu');
+                    });
+                    
+                    // General modal overlay click to close
+                    Object.values(dom.modals).forEach(modal => {
+                        modal?.addEventListener('click', (e) => {
+                            if (e.target === modal) {
+                                // Extract modal name from ID (e.g., 'about-modal' -> 'about')
+                                const modalName = modal.id.replace('-modal', '').replace('-window', '');
+                                UIManager.toggleModal(modalName, false);
+                            }
+                        });
+                    });
+
+                    // Results Screen Buttons
+                    dom.buttons.playAgain.addEventListener('click', () => QuizLogic.initializeQuiz(true));
+                    dom.buttons.newQuizFromResults.addEventListener('click', () => UIManager.showScreen('quizSettings'));
+                    dom.buttons.backToMainFromResults.addEventListener('click', () => UIManager.showScreen('mainMenu'));
+
+                    // Settings Screen Buttons
+                    dom.buttons.backToMainFromSettings.addEventListener('click', () => UIManager.showScreen('mainMenu'));
+                };
+
+                return {
+                    init,
+                    // No need to expose App.state directly now, as QuizLogic holds its own state.
+                    // If App ever needed to inspect quizState, it would call QuizLogic.getQuizState()
+                };
+
+            })();
+
+            // Initialize the app once the DOM is ready
+            App.init();
+        });
+    </script>
+</body>
+</html>
